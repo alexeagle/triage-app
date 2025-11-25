@@ -1,3 +1,5 @@
+load("@aspect_rules_ts//ts:defs.bzl", "ts_config")
+
 """Targets in the repository root"""
 
 load("@aspect_rules_js//js:defs.bzl", "js_library")
@@ -48,4 +50,10 @@ gazelle(
         ]),
     },
     gazelle = "@multitool//tools/gazelle",
+)
+
+ts_config(
+    name = "tsconfig",
+    src = "tsconfig.json",
+    visibility = [":__subpackages__"],
 )

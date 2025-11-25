@@ -3,12 +3,24 @@
   "private": true,
   "devDependencies": {
     "@eslint/js": "^9",
+    "@types/node": "^20",
     "eslint": "^9",
-    "typescript-eslint": "^8",
+    "prettier": "^3",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.7.0",
     "typescript": "5.9.3",
-    "prettier": "^3"
+    "typescript-eslint": "^8"
   },
   "pnpm": {
     "onlyBuiltDependencies": []
+  },
+  "scripts": {
+    "test:repos": "tsx src/manual-tests/listRepos.ts",
+    "test:issues": "tsx src/manual-tests/listIssues.ts"
+  },
+  "type": "module",
+  "dependencies": {
+    "@octokit/app": "^16.1.2",
+    "@octokit/request": "^10.0.7"
   }
 }
