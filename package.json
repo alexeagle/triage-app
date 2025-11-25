@@ -18,6 +18,7 @@
   "scripts": {
     "test:repos": "tsx src/manual-tests/listRepos.ts",
     "test:issues": "tsx src/manual-tests/listIssues.ts",
+    "test:prs": "tsx src/manual-tests/listPullRequests.ts",
     "run:sync": "tsx src/sync/syncAllIssues.ts"
   },
   "type": "module",

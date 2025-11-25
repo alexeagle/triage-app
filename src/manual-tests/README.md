@@ -37,6 +37,7 @@ You can set these in several ways:
    ```bash
    pnpm test:repos
    pnpm test:issues bazel-contrib/bazel-lib
+   pnpm test:prs bazel-contrib/bazel-lib
    ```
 
 ## Test Scripts
@@ -124,6 +125,71 @@ Batch 1 (page 1): 50 issues
 ...
 
 ✅ Successfully fetched 150 issues across 3 batch(es)
+✨ Test completed successfully!
+```
+
+### `listPullRequests.ts` - Test Pull Request Fetching
+
+Tests fetching pull requests from a specific repository.
+
+**Usage:**
+```bash
+tsx src/manual-tests/listPullRequests.ts <repo>
+# or: pnpm test:prs <repo>
+```
+
+**Examples:**
+```bash
+# Using full name (owner/repo)
+tsx src/manual-tests/listPullRequests.ts bazel-contrib/bazel-lib
+
+# Using just repo name (assumes alexeagle org)
+tsx src/manual-tests/listPullRequests.ts bazel-lib
+
+# Or using the npm script
+pnpm test:prs bazel-contrib/bazel-lib
+```
+
+**What it does:**
+- Authenticates with GitHub App
+- Looks up the specified repository
+- Fetches all pull requests using the async generator (with pagination)
+- Prints PR number, title, state, draft status, merge status, and metadata
+- Tests detailed fetching: file stats and reviews for a few PRs
+- Shows file statistics (additions, deletions, changed files)
+- Shows review information (reviewer, state, submitted date)
+
+**Expected output:**
+```
+Testing GitHub pull request fetching...
+
+🔐 Authenticating with GitHub App...
+🔍 Looking up repository: bazel-lib...
+✅ Found repository: bazel-contrib/bazel-lib
+
+📋 Fetching pull requests for bazel-contrib/bazel-lib...
+
+Batch 1 (page 1): 25 pull requests
+  #456: Add new feature
+    State: open
+    Draft: No
+    Merged: No
+    Author: bob
+    Created: 2024-01-15T10:30:00Z
+    Updated: 2024-01-16T14:20:00Z
+    Labels: enhancement
+    File stats: +150 -50 (12 files)
+
+✅ Successfully fetched 25 pull requests across 1 batch(es)
+
+🔍 Testing detailed PR fetching for 3 PR(s)...
+
+Testing PR #456: Add new feature
+  📊 File stats: +150 -50 (12 files)
+  👥 Reviews (2):
+    - alice: APPROVED (2024-01-16T12:00:00Z)
+    - charlie: CHANGES_REQUESTED (2024-01-16T13:00:00Z)
+
 ✨ Test completed successfully!
 ```
 
