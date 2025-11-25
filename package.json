@@ -4,6 +4,7 @@
   "devDependencies": {
     "@eslint/js": "^9",
     "@types/node": "^20",
+    "@types/pg": "^8.10.9",
     "eslint": "^9",
     "prettier": "^3",
     "ts-node": "^10.9.2",
@@ -16,11 +17,13 @@
   },
   "scripts": {
     "test:repos": "tsx src/manual-tests/listRepos.ts",
-    "test:issues": "tsx src/manual-tests/listIssues.ts"
+    "test:issues": "tsx src/manual-tests/listIssues.ts",
+    "run:sync": "tsx src/sync/syncAllIssues.ts"
   },
   "type": "module",
   "dependencies": {
     "@octokit/app": "^16.1.2",
-    "@octokit/request": "^10.0.7"
+    "@octokit/request": "^10.0.7",
+    "pg": "^8.11.3"
   }
 }
