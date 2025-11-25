@@ -19,7 +19,8 @@
     "test:repos": "tsx src/manual-tests/listRepos.ts",
     "test:issues": "tsx src/manual-tests/listIssues.ts",
     "test:prs": "tsx src/manual-tests/listPullRequests.ts",
-    "run:sync": "tsx src/sync/syncAllIssues.ts"
+    "run:syncIssues": "tsx src/sync/syncAllIssues.ts",
+    "run:syncPullRequests": "tsx src/sync/syncAllPullRequests.ts"
   },
   "type": "module",
   "dependencies": {

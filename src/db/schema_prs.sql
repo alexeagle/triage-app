@@ -20,7 +20,7 @@ CREATE TABLE pull_requests (
     additions INTEGER,
     deletions INTEGER,
     changed_files INTEGER,
-    merged BOOLEAN NOT NULL DEFAULT false,
+    merged BOOLEAN DEFAULT false,
     merged_at TIMESTAMP WITH TIME ZONE,
     merge_commit_sha VARCHAR(40),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL,
