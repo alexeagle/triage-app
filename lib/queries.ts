@@ -60,6 +60,12 @@ export interface PullRequestRow {
   synced_at: string;
 }
 
+export interface RepoStatsRow {
+  repo_github_id: number;
+  open_issues_count: number;
+  open_prs_count: number;
+}
+
 /**
  * Gets all repositories ordered by name.
  *
@@ -107,5 +113,23 @@ export async function getRepoPullRequests(
      WHERE repo_github_id = $1
      ORDER BY updated_at DESC`,
     [repoGithubId],
+  );
+}
+
+/**
+ * Gets statistics for all repositories including open issues and PR counts.
+ *
+ * @returns Array of repository stats rows with repo_github_id, open_issues_count, and open_prs_count
+ */
+export async function getRepoStats(): Promise<RepoStatsRow[]> {
+  return query<RepoStatsRow>(
+    `SELECT 
+       r.github_id as repo_github_id,
+       COUNT(DISTINCT CASE WHEN i.state = 'open' THEN i.id END)::int as open_issues_count,
+       COUNT(DISTINCT CASE WHEN pr.state = 'open' THEN pr.id END)::int as open_prs_count
+     FROM repos r
+     LEFT JOIN issues i ON r.github_id = i.repo_github_id
+     LEFT JOIN pull_requests pr ON r.github_id = pr.repo_github_id
+     GROUP BY r.github_id`,
   );
 }

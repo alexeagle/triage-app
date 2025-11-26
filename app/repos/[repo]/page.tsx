@@ -18,9 +18,11 @@ export default async function RepoPage({ params }: RepoPageProps) {
   const repoName = params.repo;
 
   return (
-    <div>
-      <h1>Repository: {repoName}</h1>
-      <p>Repository details will be displayed here.</p>
+    <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <h1 className="text-3xl font-bold mb-4">Repository: {repoName}</h1>
+      <p className="text-gray-600">
+        Repository details will be displayed here.
+      </p>
       {/* TODO: Fetch and display repository details, issues, PRs */}
     </div>
   );
