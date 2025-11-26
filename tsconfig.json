@@ -27,7 +27,7 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    "src/**/*"
+    "data/**/*"
   ],
   "exclude": ["node_modules", "bazel-bin", "bazel-out", "bazel-triage-app"]
 }

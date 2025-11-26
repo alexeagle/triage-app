@@ -30,7 +30,7 @@ You can set these in several ways:
 
 3. **Inline with the command**:
    ```bash
-   APP_ID="123456" PRIVATE_KEY="..." INSTALLATION_ID="789012" tsx src/manual-tests/listRepos.ts
+   APP_ID="123456" PRIVATE_KEY="..." INSTALLATION_ID="789012" tsx data/manual-tests/listRepos.ts
    ```
 
 4. **Using npm/pnpm scripts**:
@@ -49,7 +49,7 @@ Tests fetching all repositories from a GitHub organization.
 **Usage:**
 ```bash
 # Using tsx (recommended - handles ESM natively)
-tsx src/manual-tests/listRepos.ts
+tsx data/manual-tests/listRepos.ts
 
 # Or using the npm script
 pnpm test:repos
@@ -84,16 +84,16 @@ Tests fetching issues from a specific repository.
 
 **Usage:**
 ```bash
-ts-node src/manual-tests/listIssues.ts <repo>
+ts-node data/manual-tests/listIssues.ts <repo>
 ```
 
 **Examples:**
 ```bash
 # Using full name (owner/repo)
-tsx src/manual-tests/listIssues.ts bazel-contrib/bazel-lib
+tsx data/manual-tests/listIssues.ts bazel-contrib/bazel-lib
 
 # Using just repo name (assumes bazel-contrib org)
-tsx src/manual-tests/listIssues.ts bazel-lib
+tsx data/manual-tests/listIssues.ts bazel-lib
 
 # Or using the npm script
 pnpm test:issues bazel-contrib/bazel-lib
@@ -134,17 +134,17 @@ Tests fetching pull requests from a specific repository.
 
 **Usage:**
 ```bash
-tsx src/manual-tests/listPullRequests.ts <repo>
+tsx data/manual-tests/listPullRequests.ts <repo>
 # or: pnpm test:prs <repo>
 ```
 
 **Examples:**
 ```bash
 # Using full name (owner/repo)
-tsx src/manual-tests/listPullRequests.ts bazel-contrib/bazel-lib
+tsx data/manual-tests/listPullRequests.ts bazel-contrib/bazel-lib
 
 # Using just repo name (assumes alexeagle org)
-tsx src/manual-tests/listPullRequests.ts bazel-lib
+tsx data/manual-tests/listPullRequests.ts bazel-lib
 
 # Or using the npm script
 pnpm test:prs bazel-contrib/bazel-lib

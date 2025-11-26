@@ -2,12 +2,12 @@
  * Manual test script for fetching issues from a GitHub repository.
  *
  * Usage:
- *   tsx src/manual-tests/listIssues.ts <repo>
+ *   tsx data/manual-tests/listIssues.ts <repo>
  *   # or: pnpm test:issues <repo>
  *
  * Examples:
- *   tsx src/manual-tests/listIssues.ts bazel-contrib/bazel-lib
- *   tsx src/manual-tests/listIssues.ts bazel-lib  # assumes bazel-contrib org
+ *   tsx data/manual-tests/listIssues.ts bazel-contrib/bazel-lib
+ *   tsx data/manual-tests/listIssues.ts bazel-lib  # assumes bazel-contrib org
  *
  * Required environment variables:
  *   - APP_ID: GitHub App ID
@@ -59,12 +59,12 @@ async function main() {
   if (!repoArg) {
     console.error("❌ Missing repository argument");
     console.error("\nUsage:");
-    console.error("  ts-node src/manual-tests/listIssues.ts <repo>");
+    console.error("  ts-node data/manual-tests/listIssues.ts <repo>");
     console.error("\nExamples:");
     console.error(
-      "  ts-node src/manual-tests/listIssues.ts bazel-contrib/bazel-lib",
+      "  ts-node data/manual-tests/listIssues.ts bazel-contrib/bazel-lib",
     );
-    console.error("  ts-node src/manual-tests/listIssues.ts bazel-lib");
+    console.error("  ts-node data/manual-tests/listIssues.ts bazel-lib");
     process.exit(1);
   }
 

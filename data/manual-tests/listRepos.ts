@@ -2,7 +2,7 @@
  * Manual test script for fetching repositories from a GitHub organization.
  *
  * Usage:
- *   tsx src/manual-tests/listRepos.ts
+ *   tsx data/manual-tests/listRepos.ts
  *   # or: pnpm test:repos
  *
  * Required environment variables:

@@ -1,14 +1,14 @@
 /**
- * Manual test script for incremental pull request fetching.
+ * Manual test script for incremental issue fetching.
  *
- * Tests fetching PRs updated since the last sync timestamp.
+ * Tests fetching issues updated since the last sync timestamp.
  *
  * Usage:
- *   tsx src/manual-tests/testIncrementalPrs.ts <repo>
+ *   tsx data/manual-tests/testIncrementalIssues.ts <repo>
  *
  * Examples:
- *   tsx src/manual-tests/testIncrementalPrs.ts bazel-contrib/rules_js
- *   tsx src/manual-tests/testIncrementalPrs.ts rules_js  # assumes alexeagle org
+ *   tsx data/manual-tests/testIncrementalIssues.ts bazel-contrib/rules_js
+ *   tsx data/manual-tests/testIncrementalIssues.ts rules_js  # assumes alexeagle org
  *
  * Required environment variables:
  *   - APP_ID: GitHub App ID
@@ -19,7 +19,7 @@
 
 import { GitHubAPI } from "../github/client.js";
 import { fetchOrgRepos, Repo } from "../github/repos.js";
-import { fetchRepoPullRequests } from "../github/pullRequests.js";
+import { fetchUpdatedIssuesSince } from "../github/issues.js";
 import { getSyncState } from "../db/syncState.js";
 
 async function findRepo(api: GitHubAPI, repoArg: string): Promise<Repo> {
@@ -62,16 +62,16 @@ async function main() {
   if (!repoArg) {
     console.error("❌ Missing repository argument");
     console.error("\nUsage:");
-    console.error("  tsx src/manual-tests/testIncrementalPrs.ts <repo>");
+    console.error("  tsx data/manual-tests/testIncrementalIssues.ts <repo>");
     console.error("\nExamples:");
     console.error(
-      "  tsx src/manual-tests/testIncrementalPrs.ts bazel-contrib/rules_js",
+      "  tsx data/manual-tests/testIncrementalIssues.ts bazel-contrib/rules_js",
     );
-    console.error("  tsx src/manual-tests/testIncrementalPrs.ts rules_js");
+    console.error("  tsx data/manual-tests/testIncrementalIssues.ts rules_js");
     process.exit(1);
   }
 
-  console.log("Testing incremental PR fetching...\n");
+  console.log("Testing incremental issue fetching...\n");
 
   // Validate environment variables
   const requiredEnvVars = [
@@ -107,9 +107,9 @@ async function main() {
     console.log(`📊 Fetching sync state for ${repo.full_name}...`);
     const syncState = await getSyncState(repo.id);
 
-    if (!syncState || !syncState.last_pr_sync) {
+    if (!syncState || !syncState.last_issue_sync) {
       console.log(
-        `⚠️  No sync state found or no last_pr_sync timestamp.\n` +
+        `⚠️  No sync state found or no last_issue_sync timestamp.\n` +
           `   This means a full sync is needed (no incremental sync possible).\n`,
       );
       console.log(
@@ -118,50 +118,52 @@ async function main() {
       process.exit(0);
     }
 
-    const sinceTimestamp = syncState.last_pr_sync;
+    const sinceTimestamp = syncState.last_issue_sync;
     console.log(
-      `✅ Last PR sync: ${sinceTimestamp}\n` +
-        `📋 Fetching PRs updated since ${sinceTimestamp}...\n`,
+      `✅ Last issue sync: ${sinceTimestamp}\n` +
+        `📋 Fetching issues updated since ${sinceTimestamp}...\n`,
     );
 
-    // Fetch updated PRs (using since parameter)
-    let totalPRs = 0;
+    // Fetch updated issues
+    let totalIssues = 0;
     let batchCount = 0;
-    const prs: Array<{ number: number; title: string; updated_at: string }> =
+    const issues: Array<{ number: number; title: string; updated_at: string }> =
       [];
 
-    for await (const batch of fetchRepoPullRequests(
+    for await (const batch of fetchUpdatedIssuesSince(
       repo,
       api,
       sinceTimestamp,
     )) {
       batchCount++;
-      totalPRs += batch.pullRequests.length;
+      totalIssues += batch.issues.length;
 
       console.log(
-        `Batch ${batchCount} (page ${batch.page}): ${batch.pullRequests.length} PRs`,
+        `Batch ${batchCount} (page ${batch.page}): ${batch.issues.length} issues`,
       );
 
-      // Collect PR info
-      batch.pullRequests.forEach((pr) => {
-        prs.push({
-          number: pr.number,
-          title: pr.title,
-          updated_at: pr.updated_at,
+      // Collect issue info
+      batch.issues.forEach((issue) => {
+        issues.push({
+          number: issue.number,
+          title: issue.title,
+          updated_at: issue.updated_at,
         });
       });
     }
 
     // Print summary
-    console.log(`\n✅ Found ${totalPRs} PRs updated since last sync\n`);
+    console.log(`\n✅ Found ${totalIssues} issues updated since last sync\n`);
 
-    if (totalPRs > 0) {
-      console.log("Pull Requests:");
-      prs.forEach((pr) => {
-        console.log(`  #${pr.number}: ${pr.title} (updated: ${pr.updated_at})`);
+    if (totalIssues > 0) {
+      console.log("Issues:");
+      issues.forEach((issue) => {
+        console.log(
+          `  #${issue.number}: ${issue.title} (updated: ${issue.updated_at})`,
+        );
       });
     } else {
-      console.log("No PRs have been updated since the last sync.");
+      console.log("No issues have been updated since the last sync.");
     }
 
     console.log(`\n✨ Test completed successfully!`);

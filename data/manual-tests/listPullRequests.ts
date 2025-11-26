@@ -2,12 +2,12 @@
  * Manual test script for fetching pull requests from a GitHub repository.
  *
  * Usage:
- *   tsx src/manual-tests/listPullRequests.ts <repo>
+ *   tsx data/manual-tests/listPullRequests.ts <repo>
  *   # or: pnpm test:prs <repo>
  *
  * Examples:
- *   tsx src/manual-tests/listPullRequests.ts bazel-contrib/bazel-lib
- *   tsx src/manual-tests/listPullRequests.ts bazel-lib  # assumes alexeagle org
+ *   tsx data/manual-tests/listPullRequests.ts bazel-contrib/bazel-lib
+ *   tsx data/manual-tests/listPullRequests.ts bazel-lib  # assumes alexeagle org
  *
  * Required environment variables:
  *   - APP_ID: GitHub App ID
@@ -63,12 +63,12 @@ async function main() {
   if (!repoArg) {
     console.error("❌ Missing repository argument");
     console.error("\nUsage:");
-    console.error("  tsx src/manual-tests/listPullRequests.ts <repo>");
+    console.error("  tsx data/manual-tests/listPullRequests.ts <repo>");
     console.error("\nExamples:");
     console.error(
-      "  tsx src/manual-tests/listPullRequests.ts bazel-contrib/bazel-lib",
+      "  tsx data/manual-tests/listPullRequests.ts bazel-contrib/bazel-lib",
     );
-    console.error("  tsx src/manual-tests/listPullRequests.ts bazel-lib");
+    console.error("  tsx data/manual-tests/listPullRequests.ts bazel-lib");
     process.exit(1);
   }
 

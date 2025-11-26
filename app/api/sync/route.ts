@@ -12,7 +12,7 @@ export async function POST(request: NextRequest) {
 
   // TODO: Implement incremental sync logic
   // - Read request body for sync parameters (repo, type: issues/prs)
-  // - Call sync functions from src/sync/
+  // - Call sync functions from data/sync/
   // - Return sync results
 
   return NextResponse.json({

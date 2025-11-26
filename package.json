@@ -23,13 +23,13 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "test:repos": "tsx src/manual-tests/listRepos.ts",
-    "test:issues": "tsx src/manual-tests/listIssues.ts",
-    "test:incrementalIssues": "tsx src/manual-tests/testIncrementalIssues.ts",
-    "test:prs": "tsx src/manual-tests/listPullRequests.ts",
-    "test:incrementalPrs": "tsx src/manual-tests/testIncrementalPrs.ts",
-    "run:syncIssues": "tsx src/sync/syncAllIssues.ts",
-    "run:syncPullRequests": "tsx src/sync/syncAllPullRequests.ts"
+    "test:repos": "tsx data/manual-tests/listRepos.ts",
+    "test:issues": "tsx data/manual-tests/listIssues.ts",
+    "test:incrementalIssues": "tsx data/manual-tests/testIncrementalIssues.ts",
+    "test:prs": "tsx data/manual-tests/listPullRequests.ts",
+    "test:incrementalPrs": "tsx data/manual-tests/testIncrementalPrs.ts",
+    "run:syncIssues": "tsx data/sync/syncAllIssues.ts",
+    "run:syncPullRequests": "tsx data/sync/syncAllPullRequests.ts"
   },
   "type": "module",
   "dependencies": {
