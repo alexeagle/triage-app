@@ -19,8 +19,24 @@ export interface PullRequest {
   state: "open" | "closed";
   draft: boolean;
   author_login: string;
+  // Full user data for author (used for github_users table)
+  author?: {
+    id: number;
+    login: string;
+    avatar_url: string;
+    name: string | null;
+    type: "User" | "Bot";
+  };
   assignees: Array<{
     login: string;
+  }>;
+  // Full user data for assignees (used for github_users table)
+  assignees_full?: Array<{
+    id: number;
+    login: string;
+    avatar_url: string;
+    name: string | null;
+    type: "User" | "Bot";
   }>;
   labels: Array<{
     id: number;
@@ -50,10 +66,18 @@ interface GitHubPullRequestResponse {
   state: "open" | "closed";
   draft: boolean;
   user: {
+    id: number;
     login: string;
+    avatar_url: string;
+    name: string | null;
+    type: "User" | "Bot";
   };
   assignees: Array<{
+    id: number;
     login: string;
+    avatar_url: string;
+    name: string | null;
+    type: "User" | "Bot";
   }>;
   labels: Array<{
     id: number;
@@ -91,6 +115,13 @@ export interface FileStats {
  */
 export interface PullRequestReview {
   reviewer_login: string;
+  reviewer: {
+    id: number;
+    login: string;
+    avatar_url: string;
+    name: string | null;
+    type: "User" | "Bot";
+  };
   state:
     | "APPROVED"
     | "CHANGES_REQUESTED"
@@ -146,7 +177,21 @@ export async function* fetchRepoPullRequests(
       state: pr.state,
       draft: pr.draft,
       author_login: pr.user.login,
+      author: {
+        id: pr.user.id,
+        login: pr.user.login,
+        avatar_url: pr.user.avatar_url,
+        name: pr.user.name,
+        type: pr.user.type,
+      },
       assignees: pr.assignees.map((a) => ({ login: a.login })),
+      assignees_full: pr.assignees.map((a) => ({
+        id: a.id,
+        login: a.login,
+        avatar_url: a.avatar_url,
+        name: a.name,
+        type: a.type,
+      })),
       labels: pr.labels.map((l) => ({
         id: l.id,
         name: l.name,
@@ -237,7 +282,11 @@ export async function fetchPullRequestReviews(
   const reviews = await api.request<
     Array<{
       user: {
+        id: number;
         login: string;
+        avatar_url: string;
+        name: string | null;
+        type: "User" | "Bot";
       };
       state:
         | "APPROVED"
@@ -257,6 +306,13 @@ export async function fetchPullRequestReviews(
 
   return reviews.map((review) => ({
     reviewer_login: review.user.login,
+    reviewer: {
+      id: review.user.id,
+      login: review.user.login,
+      avatar_url: review.user.avatar_url,
+      name: review.user.name ?? null,
+      type: review.user.type as "User" | "Bot",
+    },
     state: review.state,
     submitted_at: review.submitted_at,
   }));

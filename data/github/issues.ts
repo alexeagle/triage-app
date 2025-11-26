@@ -14,7 +14,11 @@ export interface Issue {
   body: string | null;
   state: "open" | "closed";
   user: {
+    id: number;
     login: string;
+    avatar_url: string;
+    name: string | null;
+    type: "User" | "Bot";
   };
   labels: Array<{
     id: number;
@@ -22,7 +26,11 @@ export interface Issue {
     color: string;
   }>;
   assignees: Array<{
+    id: number;
     login: string;
+    avatar_url: string;
+    name: string | null;
+    type: "User" | "Bot";
   }>;
   created_at: string;
   updated_at: string;

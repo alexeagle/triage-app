@@ -11,6 +11,7 @@ import { fetchRepoIssues, type Issue } from "../github/issues.js";
 import { upsertRepo } from "../db/repos.js";
 import { upsertIssue } from "../db/issues.js";
 import { closePool } from "../db/index.js";
+import { upsertGitHubUser } from "../../src/db/githubUsers.js";
 
 export interface SyncResult {
   reposProcessed: number;
@@ -70,6 +71,44 @@ export async function syncAllIssues(orgOrUser: string): Promise<SyncResult> {
           for (const issue of batch.issues) {
             try {
               await upsertIssue(issue, repo.id);
+
+              // Upsert issue author
+              try {
+                await upsertGitHubUser({
+                  github_id: issue.user.id,
+                  login: issue.user.login,
+                  avatar_url: issue.user.avatar_url,
+                  name: issue.user.name,
+                  type: issue.user.type,
+                });
+              } catch (error) {
+                // Log but don't fail the issue sync if user upsert fails
+                const errorMessage =
+                  error instanceof Error ? error.message : String(error);
+                console.warn(
+                  `  ⚠ Failed to upsert author ${issue.user.login} for issue #${issue.number}: ${errorMessage}`,
+                );
+              }
+
+              // Upsert issue assignees
+              for (const assignee of issue.assignees) {
+                try {
+                  await upsertGitHubUser({
+                    github_id: assignee.id,
+                    login: assignee.login,
+                    avatar_url: assignee.avatar_url,
+                    name: assignee.name,
+                    type: assignee.type,
+                  });
+                } catch (error) {
+                  // Log but don't fail the issue sync if user upsert fails
+                  const errorMessage =
+                    error instanceof Error ? error.message : String(error);
+                  console.warn(
+                    `  ⚠ Failed to upsert assignee ${assignee.login} for issue #${issue.number}: ${errorMessage}`,
+                  );
+                }
+              }
             } catch (error) {
               const errorMessage =
                 error instanceof Error ? error.message : String(error);
