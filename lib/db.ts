@@ -27,10 +27,8 @@ export async function query<T = unknown>(
   queryText: string,
   params?: unknown[],
 ): Promise<T[]> {
-  // @neondatabase/serverless supports parameterized queries
-  // The sql function can be called with a query string and params array
-  const results = await (
-    sql as unknown as (query: string, params?: unknown[]) => Promise<unknown[]>
-  )(queryText, params);
+  // @neondatabase/serverless: use .query() method for parameterized queries
+  // Always pass params as an array (empty array if no params)
+  const results = await sql.query(queryText, params || []);
   return results as T[];
 }

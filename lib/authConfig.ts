@@ -15,6 +15,15 @@ export const authOptions: NextAuthOptions = {
     GitHubProvider({
       clientId: process.env.GITHUB_CLIENT_ID!,
       clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+      profile(profile) {
+        return {
+          id: profile.id,
+          login: profile.login ?? profile.name ?? `user-${profile.id}`,
+          name: profile.name,
+          avatar_url: profile.avatar_url,
+          email: profile.email,
+        };
+      },
     }),
   ],
   session: {
@@ -66,6 +75,21 @@ export const authOptions: NextAuthOptions = {
         session.accessToken = token.accessToken;
       }
       return session;
+    },
+    async redirect({ url, baseUrl }) {
+      // After sign-in, redirect to /repos
+      if (url === baseUrl || url === `${baseUrl}/`) {
+        return `${baseUrl}/repos`;
+      }
+      // Allow relative callback URLs
+      if (url.startsWith("/")) {
+        return `${baseUrl}${url}`;
+      }
+      // Allow callback URLs on the same origin
+      if (new URL(url).origin === baseUrl) {
+        return url;
+      }
+      return baseUrl;
     },
   },
 };

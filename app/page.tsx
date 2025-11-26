@@ -1,14 +1,4 @@
-import { redirect } from "next/navigation";
-import { getServerSession } from "next-auth";
-import { authOptions } from "../lib/authConfig";
-
-export default async function HomePage() {
-  const session = await getServerSession(authOptions);
-
-  if (session) {
-    redirect("/repos");
-  }
-
+export default function HomePage() {
   return (
     <div>
       <h1>Triage App</h1>
