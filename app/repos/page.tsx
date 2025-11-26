@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { getCurrentUser } from "../../lib/auth.js";
-import { getRepos } from "../../lib/queries.js";
+import { getCurrentUser } from "../../lib/auth";
+import { getRepos } from "../../lib/queries";
 
 export default async function ReposPage() {
   const user = await getCurrentUser();

@@ -6,7 +6,7 @@
 
 import { NextAuthOptions } from "next-auth";
 import GitHubProvider from "next-auth/providers/github";
-import { upsertUser } from "./auth.js";
+import { upsertUser } from "./auth";
 
 export const authOptions: NextAuthOptions = {
   providers: [

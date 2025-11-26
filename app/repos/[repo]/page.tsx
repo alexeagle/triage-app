@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../../../lib/authConfig.js";
+import { authOptions } from "../../../lib/authConfig";
 
 interface RepoPageProps {
   params: {

@@ -5,8 +5,8 @@
  */
 
 import { getServerSession } from "next-auth";
-import { authOptions } from "./authConfig.js";
-import { query } from "./db.js";
+import { authOptions } from "./authConfig";
+import { query } from "./db";
 
 export interface UserRow {
   id: number;

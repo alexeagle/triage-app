@@ -5,7 +5,7 @@
  * No business logic, just SQL queries.
  */
 
-import { query } from "./db.js";
+import { query } from "./db";
 
 export interface RepoRow {
   id: number;

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../../../lib/authConfig.js";
+import { authOptions } from "../../../lib/authConfig";
 
 export async function POST(request: NextRequest) {
   // Check authentication
