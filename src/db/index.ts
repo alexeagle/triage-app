@@ -4,7 +4,7 @@
  * Provides a connection pool and query helper for Postgres operations.
  */
 
-import { Pool, PoolClient, QueryResult } from "pg";
+import { Pool, PoolClient, QueryResult, QueryResultRow } from "pg";
 
 let pool: Pool | null = null;
 
@@ -45,7 +45,7 @@ function getPool(): Pool {
  * @param params - Array of parameter values
  * @returns Promise resolving to the query result
  */
-export async function query<T = unknown>(
+export async function query<T extends QueryResultRow = QueryResultRow>(
   text: string,
   params?: unknown[],
 ): Promise<QueryResult<T>> {

@@ -11,7 +11,7 @@
  * - Handle graceful shutdown
  */
 
-import { syncAllIssues } from "./sync/issues.js";
+import { syncAllIssues } from "./sync/syncAllIssues.js";
 
 // TODO: Implement main function
 // - Validate environment variables

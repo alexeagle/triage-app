@@ -108,11 +108,14 @@ export async function githubInstallationAuth(): Promise<string> {
   const auth = await octokit.auth({ type: "installation" });
 
   // The auth result contains a token property
-  const authResult = auth as { token?: string };
-
-  if (!authResult || !authResult.token) {
+  if (!auth || typeof auth !== "object" || !("token" in auth)) {
     throw new Error("Failed to get installation token from Octokit instance");
   }
 
-  return authResult.token;
+  const token = (auth as { token: string }).token;
+  if (!token || typeof token !== "string") {
+    throw new Error("Installation token is invalid");
+  }
+
+  return token;
 }
