@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUser } from "../../lib/auth";
-import { getRepos, getRepoStats, type RepoRow } from "../../lib/queries";
+import { getOrgs } from "../../lib/queries";
 
 export default async function ReposPage() {
   const user = await getCurrentUser();
@@ -10,48 +10,23 @@ export default async function ReposPage() {
     redirect("/");
   }
 
-  const [repos, stats] = await Promise.all([getRepos(), getRepoStats()]);
-
-  // Create a map of stats by repo_github_id for quick lookup
-  const statsMap = new Map(stats.map((stat) => [stat.repo_github_id, stat]));
-
-  // Merge stats into repos
-  const reposWithStats: (RepoRow & {
-    open_issues_count: number;
-    open_prs_count: number;
-  })[] = repos.map((repo) => {
-    const stat = statsMap.get(repo.github_id);
-    return {
-      ...repo,
-      open_issues_count: stat?.open_issues_count ?? 0,
-      open_prs_count: stat?.open_prs_count ?? 0,
-    };
-  });
+  const orgs = await getOrgs();
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <h1 className="text-3xl font-bold mb-6">Repositories</h1>
+      <h1 className="text-3xl font-bold mb-6">Organizations</h1>
       <ul className="space-y-2">
-        {reposWithStats.map((repo) => (
+        {orgs.map((org) => (
           <li
-            key={repo.id}
+            key={org}
             className="border-b border-gray-200 pb-2 last:border-b-0"
           >
             <Link
-              href={`/repos/${repo.full_name}`}
-              className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
+              href={`/repos/${org}`}
+              className="text-blue-600 hover:text-blue-800 hover:underline font-medium text-lg"
             >
-              {repo.full_name}
+              {org}
             </Link>
-            <span className="text-gray-500 text-sm ml-2">
-              {repo.open_issues_count} open issues, {repo.open_prs_count} open
-              PRs
-            </span>
-            {repo.updated_at && (
-              <span className="text-gray-500 text-sm ml-2">
-                (updated: {new Date(repo.updated_at).toLocaleDateString()})
-              </span>
-            )}
           </li>
         ))}
       </ul>

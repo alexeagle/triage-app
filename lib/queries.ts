@@ -133,3 +133,35 @@ export async function getRepoStats(): Promise<RepoStatsRow[]> {
      GROUP BY r.github_id`,
   );
 }
+
+/**
+ * Gets all unique organizations from repositories.
+ * Extracts the organization name from full_name (everything before the first "/").
+ *
+ * @returns Array of organization names, sorted alphabetically
+ */
+export async function getOrgs(): Promise<string[]> {
+  const result = await query<{ org: string }>(
+    `SELECT DISTINCT 
+       SPLIT_PART(full_name, '/', 1) as org
+     FROM repos
+     ORDER BY org ASC`,
+  );
+  return result.map((row) => row.org);
+}
+
+/**
+ * Gets all repositories for a specific organization.
+ *
+ * @param org - Organization name
+ * @returns Array of repository rows for that organization
+ */
+export async function getReposByOrg(org: string): Promise<RepoRow[]> {
+  return query<RepoRow>(
+    `SELECT id, github_id, name, full_name, private, archived, pushed_at, updated_at, created_at
+     FROM repos
+     WHERE full_name LIKE $1
+     ORDER BY name ASC`,
+    [`${org}/%`],
+  );
+}
