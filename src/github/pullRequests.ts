@@ -120,7 +120,7 @@ export async function* fetchRepoPullRequests(
     const params: Record<string, unknown> = {
       owner: repo.owner.login,
       repo: repo.name,
-      state: "all",
+      state: "open",
       page,
       per_page: perPage,
       sort: "updated",

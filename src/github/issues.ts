@@ -97,3 +97,55 @@ export async function* fetchRepoIssues(
     page++;
   }
 }
+
+/**
+ * Fetches issues updated since a specific timestamp.
+ * Used for incremental sync - only returns issues that have been updated after the given time.
+ * Automatically filters out pull requests (GitHub API returns both issues and PRs).
+ *
+ * @param repo - Repository object with owner and name
+ * @param api - GitHub API client instance
+ * @param sinceTimestamp - ISO 8601 timestamp (YYYY-MM-DDTHH:MM:SSZ) to fetch issues updated after this time
+ * @returns Async generator yielding batches of issues
+ */
+export async function* fetchUpdatedIssuesSince(
+  repo: Repo,
+  api: GitHubAPI,
+  sinceTimestamp: string,
+): AsyncGenerator<IssueBatch> {
+  let page = 1;
+  const perPage = 100;
+
+  while (true) {
+    const items = await api.request<Issue[]>({
+      method: "GET",
+      url: "/repos/{owner}/{repo}/issues",
+      owner: repo.owner.login,
+      repo: repo.name,
+      state: "all",
+      since: sinceTimestamp,
+      page,
+      per_page: perPage,
+      sort: "updated",
+      direction: "desc",
+    });
+
+    // Filter out pull requests (they have a pull_request field)
+    // GitHub API returns both issues and PRs when querying /issues endpoint
+    const issues = items.filter((item) => !item.pull_request);
+
+    const hasMore = items.length === perPage;
+
+    yield {
+      issues,
+      page,
+      hasMore,
+    };
+
+    if (!hasMore) {
+      break;
+    }
+
+    page++;
+  }
+}
