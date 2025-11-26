@@ -45,6 +45,8 @@ This provides fast SSR, durable state, and predictable sync behavior with minima
 
 - Ensure Neon database stays below storage limits; prune closed PRs if necessary. Database is at https://console.neon.tech/app/projects/wandering-morning-49995035
 - Redeploy on Vercel after changing env vars. App is at https://vercel.com/alex-eagles-projects-83025067/triage-app
+- GitHub App for data operations: https://github.com/settings/apps/alex-s-issue-and-pr-triage
+- GitHub App for oauth flow: https://github.com/settings/applications/3264800 
 - Sync jobs run manually or on cron; restart worker if sync fails.
 - Check GitHub App credentials annually (private keys can expire or be revoked).
 - Add new repos to sync by installing the GitHub App into those org repositories.
