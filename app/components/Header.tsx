@@ -25,11 +25,7 @@ export default async function Header() {
         {avatarUrl ? (
           <img src={avatarUrl} alt={login} className="w-8 h-8 rounded-full" />
         ) : (
-          <FontAwesomeIcon
-            icon={faUser}
-            className="w-8 h-8"
-            style={{ width: "2rem", height: "2rem" }}
-          />
+          <FontAwesomeIcon icon={faUser} className="w-8 h-8" />
         )}
         <span>{login}</span>
       </div>
