@@ -186,8 +186,11 @@ export async function syncAllPullRequests(
  * Reads organization name from environment variable or command line argument.
  */
 export async function main(): Promise<void> {
-  const orgOrUser =
-    process.env.GITHUB_ORG || process.argv[2] || "bazel-contrib";
+  const orgOrUser = process.env.GITHUB_ORG || process.argv[2];
+  if (!orgOrUser) {
+    console.error("❌ GITHUB_ORG or command line argument is required");
+    process.exit(1);
+  }
 
   if (!process.env.DATABASE_URL) {
     console.error("❌ DATABASE_URL environment variable is required");

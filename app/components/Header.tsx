@@ -19,13 +19,17 @@ export default async function Header() {
     <header className="p-4 border-b border-gray-200 flex items-center justify-between">
       <div className="flex items-center gap-2">
         <img src="/logo.png" alt="Triage App" className="w-8 h-8" />
-        <span className="font-semibold">Triage App</span>
+        <span className="font-semibold">Alex's Triage App</span>
       </div>
       <div className="flex items-center gap-2">
         {avatarUrl ? (
           <img src={avatarUrl} alt={login} className="w-8 h-8 rounded-full" />
         ) : (
-          <FontAwesomeIcon icon={faUser} className="w-8 h-8" />
+          <FontAwesomeIcon
+            icon={faUser}
+            className="w-8 h-8"
+            style={{ width: "2rem", height: "2rem" }}
+          />
         )}
         <span>{login}</span>
       </div>

@@ -38,10 +38,10 @@ export default async function ReposPage() {
             className="border-b border-gray-200 pb-2 last:border-b-0"
           >
             <Link
-              href={`/repos/${repo.name}`}
+              href={`/repos/${repo.full_name}`}
               className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
             >
-              {repo.name}
+              {repo.full_name}
             </Link>
             <span className="text-gray-500 text-sm ml-2">
               {repo.open_issues_count} open issues, {repo.open_prs_count} open
