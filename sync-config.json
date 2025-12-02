@@ -1,0 +1,18 @@
+{
+  "bazel-contrib": {
+    "include": "*",
+    "exclude": []
+  },
+  "aspect-build": {
+    "include": "*",
+    "exclude": []
+  },
+  "aspect-extensions": {
+    "include": "*",
+    "exclude": []
+  },
+  "chainguard-dev": {
+    "include": ["rules_apko"],
+    "exclude": []
+  }
+}

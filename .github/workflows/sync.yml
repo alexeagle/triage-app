@@ -16,6 +16,7 @@ jobs:
           - bazel-contrib
           - aspect-build
           - aspect-extensions
+          - chainguard-dev
 
     steps:
       - uses: actions/checkout@v5
