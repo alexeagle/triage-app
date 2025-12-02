@@ -21,6 +21,7 @@
   "pnpm": {
     "onlyBuiltDependencies": []
   },
+  "packageManager": "pnpm@10.20.0",
   "scripts": {
     "dev": "next dev",
     "build": "next build",
@@ -32,7 +33,8 @@
     "test:prs": "tsx data/manual-tests/listPullRequests.ts",
     "test:incrementalPrs": "tsx data/manual-tests/testIncrementalPrs.ts",
     "run:syncIssues": "tsx data/sync/syncAllIssues.ts",
-    "run:syncPullRequests": "tsx data/sync/syncAllPullRequests.ts"
+    "run:syncPullRequests": "tsx data/sync/syncAllPullRequests.ts",
+    "run:syncIncremental": "tsx data/sync/syncIncremental.ts"
   },
   "type": "module",
   "dependencies": {

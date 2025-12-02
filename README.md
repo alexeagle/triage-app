@@ -47,7 +47,13 @@ This provides fast SSR, durable state, and predictable sync behavior with minima
 - Redeploy on Vercel after changing env vars. App is at https://vercel.com/alex-eagles-projects-83025067/triage-app
 - GitHub App for data operations: https://github.com/settings/apps/alex-s-issue-and-pr-triage
 - GitHub App for oauth flow: https://github.com/settings/applications/3264800 
-- Sync jobs run manually or on cron; restart worker if sync fails.
+- **Incremental sync runs automatically via GitHub Actions** (`.github/workflows/sync.yml`) every hour. Configure these secrets in your GitHub repository:
+  - `DATABASE_URL`: Postgres connection string
+  - `APP_ID`: GitHub App ID
+  - `PRIVATE_KEY`: GitHub App private key (PEM format, including `-----BEGIN RSA PRIVATE KEY-----` and `-----END RSA PRIVATE KEY-----`)
+  - `INSTALLATION_ID`: GitHub App installation ID
+  - `GITHUB_ORG`: Organization or user name to sync
+- Sync jobs can also be run manually: `pnpm run:syncIncremental` (incremental) or `pnpm run:syncIssues` / `pnpm run:syncPullRequests` (full sync)
 - Check GitHub App credentials annually (private keys can expire or be revoked).
 - Add new repos to sync by installing the GitHub App into those org repositories.
 
