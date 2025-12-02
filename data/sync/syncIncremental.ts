@@ -215,24 +215,35 @@ export async function syncIncremental(
 
         // Sync PRs (incremental if sync state exists, otherwise full)
         let repoPRsCount = 0;
-        if (syncState?.last_pr_sync) {
+        const lastPrSync = syncState?.last_pr_sync;
+        const lastPrSyncDate = lastPrSync ? new Date(lastPrSync) : null;
+
+        if (lastPrSyncDate) {
           console.log(
             `  📋 Incremental PR sync (since ${syncState.last_pr_sync})...`,
           );
-          // Note: GitHub PR API doesn't support 'since' parameter like issues do
-          // So we still fetch all PRs but can optimize later if needed
-          console.log(
-            `  ⚠ Note: GitHub PR API doesn't support incremental sync, doing full sync`,
-          );
+        } else {
+          console.log(`  📋 Full PR sync (no previous sync state)...`);
         }
 
         // Fetch and sync PRs
         let batchCount = 0;
+        let prsFiltered = 0;
         for await (const batch of fetchRepoPullRequests(repo, api)) {
           batchCount++;
-          repoPRsCount += batch.pullRequests.length;
 
-          for (const pr of batch.pullRequests) {
+          // Filter PRs by updated_at if doing incremental sync
+          const prsToProcess = lastPrSyncDate
+            ? batch.pullRequests.filter((pr) => {
+                const prUpdated = new Date(pr.updated_at);
+                return prUpdated >= lastPrSyncDate;
+              })
+            : batch.pullRequests;
+
+          prsFiltered += batch.pullRequests.length - prsToProcess.length;
+          repoPRsCount += prsToProcess.length;
+
+          for (const pr of prsToProcess) {
             try {
               // Fetch file stats and reviews for this PR
               const [fileStats, reviews] = await Promise.all([
@@ -342,9 +353,15 @@ export async function syncIncremental(
         await upsertPrSyncTime(repo.id, new Date().toISOString());
 
         result.reposProcessed++;
-        console.log(
-          `  ✅ Completed: ${repoIssuesCount} issues, ${repoPRsCount} PRs\n`,
-        );
+        if (prsFiltered > 0) {
+          console.log(
+            `  ✅ Completed: ${repoIssuesCount} issues, ${repoPRsCount} PRs (${prsFiltered} PRs skipped - no updates since last sync)\n`,
+          );
+        } else {
+          console.log(
+            `  ✅ Completed: ${repoIssuesCount} issues, ${repoPRsCount} PRs\n`,
+          );
+        }
       } catch (error) {
         result.reposSkipped++;
         const errorMessage =
