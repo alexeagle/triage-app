@@ -26,7 +26,10 @@ jobs:
           APP_ID: ${{ secrets.APP_ID }}
           PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
           INSTALLATION_ID: ${{ secrets.INSTALLATION_ID }}
-        run: pnpm run:syncIncremental
+        run: |
+          pnpm run:syncIncremental bazel-contrib
+          pnpm run:syncIncremental aspect-build
+          pnpm run:syncIncremental aspect-extensions
 
       - name: Notify on failure
         if: failure()
