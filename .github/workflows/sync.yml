@@ -17,7 +17,12 @@ jobs:
           - aspect-build
           - aspect-extensions
           - chainguard-dev
-
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      APP_ID: ${{ secrets.APP_ID }}
+      PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+      INSTALLATION_ID: ${{ secrets.INSTALLATION_ID }}
+      GITHUB_ORG: ${{ matrix.org }}
     steps:
       - uses: actions/checkout@v5
       - uses: pnpm/action-setup@v4
@@ -27,12 +32,7 @@ jobs:
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
       - run: pnpm run:syncIncremental
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          APP_ID: ${{ secrets.APP_ID }}
-          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
-          INSTALLATION_ID: ${{ secrets.INSTALLATION_ID }}
-          GITHUB_ORG: ${{ matrix.org }}
+      - run: pnpm run:syncIssueReactions
       - name: Notify on failure
         if: failure()
         uses: actions/github-script@v7

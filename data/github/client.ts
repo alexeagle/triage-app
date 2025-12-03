@@ -50,7 +50,8 @@ export class GitHubAPI {
           headers: {
             ...options.headers,
             authorization: `token ${token}`,
-            accept: "application/vnd.github.v3+json",
+            // Use custom Accept header if provided, otherwise default to v3
+            accept: options.headers?.accept || "application/vnd.github.v3+json",
           },
         });
 

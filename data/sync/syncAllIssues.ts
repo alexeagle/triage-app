@@ -11,7 +11,7 @@ import { fetchRepoIssues, type Issue } from "../github/issues.js";
 import { upsertRepo } from "../db/repos.js";
 import { upsertIssue } from "../db/issues.js";
 import { closePool } from "../db/index.js";
-import { upsertGitHubUser } from "../../src/db/githubUsers.js";
+import { upsertGitHubUser } from "../db/githubUsers.js";
 
 export interface SyncResult {
   reposProcessed: number;

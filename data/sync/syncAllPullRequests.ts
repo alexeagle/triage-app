@@ -18,7 +18,7 @@ import {
 import { upsertPullRequest } from "../db/pullRequests.js";
 import { replacePullRequestReviews } from "../db/pullRequests.js";
 import { closePool } from "../db/index.js";
-import { upsertGitHubUser } from "../../src/db/githubUsers.js";
+import { upsertGitHubUser } from "../db/githubUsers.js";
 
 export interface PRSyncResult {
   reposProcessed: number;

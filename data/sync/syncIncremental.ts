@@ -29,7 +29,7 @@ import {
   upsertPrSyncTime,
 } from "../db/syncState.js";
 import { closePool } from "../db/index.js";
-import { upsertGitHubUser } from "../../src/db/githubUsers.js";
+import { upsertGitHubUser } from "../db/githubUsers.js";
 
 export interface IncrementalSyncResult {
   reposProcessed: number;
