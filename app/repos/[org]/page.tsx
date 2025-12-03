@@ -32,14 +32,16 @@ export default async function OrgPage({ params }: OrgPageProps) {
   const reposWithStats: (RepoRow & {
     open_issues_count: number;
     open_prs_count: number;
-  })[] = repos.map((repo) => {
-    const stat = statsMap.get(repo.github_id);
-    return {
-      ...repo,
-      open_issues_count: stat?.open_issues_count ?? 0,
-      open_prs_count: stat?.open_prs_count ?? 0,
-    };
-  });
+  })[] = repos
+    .map((repo) => {
+      const stat = statsMap.get(repo.github_id);
+      return {
+        ...repo,
+        open_issues_count: stat?.open_issues_count ?? 0,
+        open_prs_count: stat?.open_prs_count ?? 0,
+      };
+    })
+    .filter((repo) => repo.open_issues_count > 0 || repo.open_prs_count > 0);
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
