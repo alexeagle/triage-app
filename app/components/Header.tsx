@@ -1,10 +1,10 @@
-import { getServerSession } from "next-auth";
-import { authOptions } from "../../lib/authConfig";
+"use client";
+import { useSession } from "next-auth/react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faUser } from "@fortawesome/free-solid-svg-icons";
 
-export default async function Header() {
-  const session = await getServerSession(authOptions);
+export default function Header() {
+  const { data: session } = useSession();
 
   if (!session) {
     return <header className="p-4 border-b border-gray-200"></header>;

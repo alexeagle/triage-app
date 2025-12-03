@@ -35,6 +35,7 @@ export interface IssueRow {
   author_login: string;
   synced_at: string;
   repo_full_name?: string; // Optional, populated when joined with repos table
+  author_avatar_url?: string | null; // Optional, populated when joined with github_users table
 }
 
 export interface PullRequestRow {
@@ -88,11 +89,13 @@ export async function getRepos(): Promise<RepoRow[]> {
  */
 export async function getRepoIssues(repoGithubId: number): Promise<IssueRow[]> {
   return query<IssueRow>(
-    `SELECT id, github_id, repo_github_id, number, title, body, state,
-            created_at, updated_at, closed_at, labels, assignees, author_login, synced_at
-     FROM issues
-     WHERE repo_github_id = $1
-     ORDER BY updated_at DESC`,
+    `SELECT i.id, i.github_id, i.repo_github_id, i.number, i.title, i.body, i.state,
+            i.created_at, i.updated_at, i.closed_at, i.labels, i.assignees, i.author_login, i.synced_at,
+            gu.avatar_url as author_avatar_url
+     FROM issues i
+     LEFT JOIN github_users gu ON i.author_login = gu.login
+     WHERE i.repo_github_id = $1
+     ORDER BY i.updated_at DESC`,
     [repoGithubId],
   );
 }
@@ -195,9 +198,11 @@ export async function getIssuesByAuthor(
       i.assignees,
       i.author_login,
       i.synced_at,
-      r.full_name as repo_full_name
+      r.full_name as repo_full_name,
+      gu.avatar_url as author_avatar_url
     FROM issues i
     INNER JOIN repos r ON i.repo_github_id = r.github_id
+    LEFT JOIN github_users gu ON i.author_login = gu.login
     WHERE i.author_login = $1
     ORDER BY i.updated_at DESC
     LIMIT $2
