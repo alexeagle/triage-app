@@ -219,9 +219,7 @@ export async function syncIncremental(
         const lastPrSyncDate = lastPrSync ? new Date(lastPrSync) : null;
 
         if (lastPrSyncDate) {
-          console.log(
-            `  📋 Incremental PR sync (since ${syncState.last_pr_sync})...`,
-          );
+          console.log(`  📋 Incremental PR sync (since ${lastPrSyncDate})...`);
         } else {
           console.log(`  📋 Full PR sync (no previous sync state)...`);
         }

@@ -4,11 +4,22 @@ import { faExternalLink } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { IssueByAuthorRow } from "@/lib/queries";
 
-export default function IssuesTable({ issues, page, totalPages }) {
+interface IssuesTableProps {
+  issues: IssueByAuthorRow[];
+  page: number;
+  totalPages: number;
+}
+
+export default function IssuesTable({
+  issues,
+  page,
+  totalPages,
+}: IssuesTableProps) {
   const router = useRouter();
 
-  const go = (p) => {
+  const go = (p: number) => {
     router.push(`?page=${p}`);
   };
 
