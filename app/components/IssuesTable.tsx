@@ -1,7 +1,7 @@
 "use client";
 import { useSession } from "next-auth/react";
 import { useState } from "react";
-import { faExternalLink } from "@fortawesome/free-solid-svg-icons";
+import { faExternalLink, faFilter } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -28,6 +28,9 @@ export default function IssuesTable({
   const [reporterFilter, setReporterFilter] = useState<
     "all" | "not me" | "only me"
   >("all");
+  const [timeFilter, setTimeFilter] = useState<
+    "all" | "day" | "week" | "month" | "year"
+  >("week");
 
   const go = (p: number) => {
     router.push(`?page=${p}`);
@@ -75,20 +78,53 @@ export default function IssuesTable({
     // Apply reporter filter
     const userLogin = (session?.user as { login?: string })?.login;
     if (reporterFilter === "only me") {
-      return issue.author_login === userLogin;
+      if (issue.author_login !== userLogin) {
+        return false;
+      }
     }
     if (reporterFilter === "not me") {
-      return issue.author_login !== userLogin;
+      if (issue.author_login === userLogin) {
+        return false;
+      }
     }
-    // "all" - no filter
+
+    // Apply time filter
+    if (timeFilter !== "all") {
+      const now = new Date();
+      const updatedAt = new Date(issue.updated_at);
+      let cutoffDate: Date;
+
+      switch (timeFilter) {
+        case "day":
+          cutoffDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+          break;
+        case "week":
+          cutoffDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+          break;
+        case "month":
+          cutoffDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+          break;
+        case "year":
+          cutoffDate = new Date(now.getTime() - 12 * 30 * 24 * 60 * 60 * 1000);
+          break;
+        default:
+          return true;
+      }
+
+      if (updatedAt < cutoffDate) {
+        return false;
+      }
+    }
+
     return true;
   });
 
   return (
     <div className="space-y-4">
       {/* Filtering */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between bg-blue-100 p-2 rounded-lg">
         <div className="flex items-center gap-2">
+          <FontAwesomeIcon icon={faFilter} className="mr-2" />
           <label className="flex items-center gap-1">
             Type:
             <select
@@ -120,6 +156,31 @@ export default function IssuesTable({
               <option value="all">all</option>
               <option value="not me">not me</option>
               <option value="only me">only me</option>
+            </select>
+          </label>
+          <label className="flex items-center gap-1">
+            Updated:
+            <select
+              value={timeFilter}
+              onChange={(e) => {
+                const value = e.target.value;
+                if (
+                  value === "all" ||
+                  value === "day" ||
+                  value === "week" ||
+                  value === "month" ||
+                  value === "year"
+                ) {
+                  setTimeFilter(value);
+                }
+              }}
+              className="px-2 py-1 text-sm border rounded"
+            >
+              <option value="all">all</option>
+              <option value="day">last 24 hours</option>
+              <option value="week">last 7 days</option>
+              <option value="month">last 30 days</option>
+              <option value="year">last 12 months</option>
             </select>
           </label>
         </div>
