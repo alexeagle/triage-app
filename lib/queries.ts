@@ -66,6 +66,15 @@ export interface RepoStatsRow {
   open_prs_count: number;
 }
 
+export interface IssueByAuthorRow {
+  id: number;
+  title: string;
+  repo_full_name: string;
+  state: "open" | "closed";
+  created_at: string;
+  updated_at: string;
+}
+
 /**
  * Gets all repositories ordered by name.
  *
@@ -164,4 +173,43 @@ export async function getReposByOrg(org: string): Promise<RepoRow[]> {
      ORDER BY name ASC`,
     [`${org}/%`],
   );
+}
+
+export const PAGE_SIZE = 20;
+
+/**
+ * Gets issues by author login, ordered by updated_at descending.
+ *
+ * @param author - Author login (GitHub username)
+ * @returns Array of issue rows with repository full name
+ */
+export async function getIssuesByAuthor(
+  author: string,
+  offset: number,
+): Promise<{ issues: IssueByAuthorRow[]; total: number }> {
+  const issues = await query<IssueByAuthorRow>(
+    `SELECT
+      i.number as id,
+      i.title,
+      r.full_name as repo_full_name,
+      i.state,
+      i.created_at,
+      i.updated_at
+    FROM issues i
+    INNER JOIN repos r ON i.repo_github_id = r.github_id
+    WHERE i.author_login = $1
+    ORDER BY i.updated_at DESC
+    LIMIT $2
+    OFFSET $3
+    `,
+    [author, PAGE_SIZE, offset],
+  );
+  const totalResult = await query<{ count: number }>(
+    `SELECT COUNT(*)::int AS count
+      FROM issues
+      WHERE author_login = $1`,
+    [author],
+  );
+  const total = totalResult[0].count;
+  return { issues, total };
 }
