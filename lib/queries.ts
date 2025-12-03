@@ -34,6 +34,7 @@ export interface IssueRow {
   assignees: unknown; // JSONB
   author_login: string;
   synced_at: string;
+  repo_full_name?: string; // Optional, populated when joined with repos table
 }
 
 export interface PullRequestRow {
@@ -64,15 +65,6 @@ export interface RepoStatsRow {
   repo_github_id: number;
   open_issues_count: number;
   open_prs_count: number;
-}
-
-export interface IssueByAuthorRow {
-  id: number;
-  title: string;
-  repo_full_name: string;
-  state: "open" | "closed";
-  created_at: string;
-  updated_at: string;
 }
 
 /**
@@ -186,15 +178,24 @@ export const PAGE_SIZE = 20;
 export async function getIssuesByAuthor(
   author: string,
   offset: number,
-): Promise<{ issues: IssueByAuthorRow[]; total: number }> {
-  const issues = await query<IssueByAuthorRow>(
+): Promise<{ issues: IssueRow[]; total: number }> {
+  const issues = await query<IssueRow>(
     `SELECT
-      i.number as id,
+      i.id,
+      i.github_id,
+      i.repo_github_id,
+      i.number,
       i.title,
-      r.full_name as repo_full_name,
+      i.body,
       i.state,
       i.created_at,
-      i.updated_at
+      i.updated_at,
+      i.closed_at,
+      i.labels,
+      i.assignees,
+      i.author_login,
+      i.synced_at,
+      r.full_name as repo_full_name
     FROM issues i
     INNER JOIN repos r ON i.repo_github_id = r.github_id
     WHERE i.author_login = $1

@@ -4,10 +4,10 @@ import { faExternalLink } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { IssueByAuthorRow } from "@/lib/queries";
+import { IssueRow } from "@/lib/queries";
 
 interface IssuesTableProps {
-  issues: IssueByAuthorRow[];
+  issues: IssueRow[];
   page: number;
   totalPages: number;
 }
@@ -47,7 +47,7 @@ export default function IssuesTable({
                 <td className="px-4 py-2 text-sm">
                   <Link
                     className="text-blue-600 hover:underline"
-                    href={`https://github.com/${i.repo_full_name}/issues/${i.id}`}
+                    href={`https://github.com/${i.repo_full_name || ""}/issues/${i.number}`}
                     target="_blank"
                   >
                     {i.title}
@@ -55,7 +55,7 @@ export default function IssuesTable({
                   </Link>
                 </td>
                 <td className="px-4 py-2 text-sm text-gray-600">
-                  {i.repo_full_name}
+                  {i.repo_full_name || "N/A"}
                 </td>
                 <td className="px-4 py-2 text-sm text-gray-600">
                   {new Date(i.updated_at).toLocaleDateString()}
