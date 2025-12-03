@@ -82,10 +82,10 @@ export async function getRepos(): Promise<RepoRow[]> {
 }
 
 /**
- * Gets all issues for a repository ordered by updated_at descending.
+ * Gets all open issues for a repository ordered by updated_at descending.
  *
  * @param repoGithubId - GitHub ID of the repository
- * @returns Array of issue rows
+ * @returns Array of open issue rows
  */
 export async function getRepoIssues(repoGithubId: number): Promise<IssueRow[]> {
   return query<IssueRow>(
@@ -94,7 +94,7 @@ export async function getRepoIssues(repoGithubId: number): Promise<IssueRow[]> {
             gu.avatar_url as author_avatar_url
      FROM issues i
      LEFT JOIN github_users gu ON i.author_login = gu.login
-     WHERE i.repo_github_id = $1
+     WHERE i.repo_github_id = $1 AND i.state = 'open'
      ORDER BY i.updated_at DESC`,
     [repoGithubId],
   );
@@ -173,10 +173,10 @@ export async function getReposByOrg(org: string): Promise<RepoRow[]> {
 export const PAGE_SIZE = 20;
 
 /**
- * Gets issues by author login, ordered by updated_at descending.
+ * Gets open issues by author login, ordered by updated_at descending.
  *
  * @param author - Author login (GitHub username)
- * @returns Array of issue rows with repository full name
+ * @returns Array of open issue rows with repository full name
  */
 export async function getIssuesByAuthor(
   author: string,
@@ -203,7 +203,7 @@ export async function getIssuesByAuthor(
     FROM issues i
     INNER JOIN repos r ON i.repo_github_id = r.github_id
     LEFT JOIN github_users gu ON i.author_login = gu.login
-    WHERE i.author_login = $1
+    WHERE i.author_login = $1 AND i.state = 'open'
     ORDER BY i.updated_at DESC
     LIMIT $2
     OFFSET $3
@@ -213,7 +213,7 @@ export async function getIssuesByAuthor(
   const totalResult = await query<{ count: number }>(
     `SELECT COUNT(*)::int AS count
       FROM issues
-      WHERE author_login = $1`,
+      WHERE author_login = $1 AND state = 'open'`,
     [author],
   );
   const total = totalResult[0].count;
