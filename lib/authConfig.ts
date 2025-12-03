@@ -77,9 +77,8 @@ export const authOptions: NextAuthOptions = {
       return session;
     },
     async redirect({ url, baseUrl }) {
-      // After sign-in, redirect to /repos
       if (url === baseUrl || url === `${baseUrl}/`) {
-        return `${baseUrl}/repos`;
+        return `${baseUrl}`;
       }
       // Allow relative callback URLs
       if (url.startsWith("/")) {
