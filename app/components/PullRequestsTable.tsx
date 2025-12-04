@@ -5,85 +5,72 @@ import { faExternalLink, faFilter } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { IssueRow } from "@/lib/queries";
+import { PullRequestRow } from "@/lib/queries";
 import TimeAgo from "./TimeAgo";
 
-interface IssuesTableProps {
-  issues: IssueRow[];
+interface PullRequestsTableProps {
+  pullRequests: PullRequestRow[];
+  repoFullName: string;
   page: number;
   totalPages: number;
 }
 
-export default function IssuesTable({
-  issues,
+export default function PullRequestsTable({
+  pullRequests,
+  repoFullName,
   page,
   totalPages,
-}: IssuesTableProps) {
+}: PullRequestsTableProps) {
   const router = useRouter();
   const { data: session } = useSession();
 
-  const [typeFilter, setTypeFilter] = useState<
-    "all" | "feature request" | "bug" | "other"
-  >("all");
-  const [reporterFilter, setReporterFilter] = useState<
+  const [stateFilter, setStateFilter] = useState<"all" | "open" | "closed">(
+    "all",
+  );
+  const [draftFilter, setDraftFilter] = useState<"all" | "draft" | "not draft">(
+    "all",
+  );
+  const [authorFilter, setAuthorFilter] = useState<
     "all" | "not me" | "only me"
   >("all");
   const [timeFilter, setTimeFilter] = useState<
     "all" | "day" | "week" | "month" | "year"
-  >("week");
+  >("all");
 
   const go = (p: number) => {
     router.push(`?page=${p}`);
   };
 
-  // Helper function to determine issue type
-  const getIssueType = (
-    issue: IssueRow,
-  ): "feature request" | "bug" | "other" => {
-    // Check title prefix for feature requests
-    if (issue.title.startsWith("[FR]")) {
-      return "feature request";
-    }
-
-    // Check labels
-    const labels = issue.labels as Array<{ name: string }> | null;
-    if (labels && Array.isArray(labels)) {
-      const labelNames = labels.map((l) => l.name.toLowerCase());
-
-      if (labelNames.some((name) => name.includes("bug"))) {
-        return "bug";
-      }
-      if (
-        labelNames.some(
-          (name) => name.includes("feature") || name.includes("fr"),
-        )
-      ) {
-        return "feature request";
-      }
-    }
-
-    return "other";
-  };
-
-  // Filter issues
-  const filteredIssues = issues.filter((issue) => {
-    // Apply type filter
-    if (typeFilter !== "all") {
-      const issueType = getIssueType(issue);
-      if (issueType !== typeFilter) {
+  // Filter pull requests
+  const filteredPRs = pullRequests.filter((pr) => {
+    // Apply state filter
+    if (stateFilter !== "all") {
+      if (pr.state !== stateFilter) {
         return false;
       }
     }
 
-    // Apply reporter filter
+    // Apply draft filter
+    if (draftFilter === "draft") {
+      if (!pr.draft) {
+        return false;
+      }
+    }
+    if (draftFilter === "not draft") {
+      if (pr.draft) {
+        return false;
+      }
+    }
+
+    // Apply author filter
     const userLogin = (session?.user as { login?: string })?.login;
-    if (reporterFilter === "only me") {
-      if (issue.author_login !== userLogin) {
+    if (authorFilter === "only me") {
+      if (pr.author_login !== userLogin) {
         return false;
       }
     }
-    if (reporterFilter === "not me") {
-      if (issue.author_login === userLogin) {
+    if (authorFilter === "not me") {
+      if (pr.author_login === userLogin) {
         return false;
       }
     }
@@ -91,7 +78,7 @@ export default function IssuesTable({
     // Apply time filter
     if (timeFilter !== "all") {
       const now = new Date();
-      const updatedAt = new Date(issue.updated_at);
+      const updatedAt = new Date(pr.updated_at);
       let cutoffDate: Date;
 
       switch (timeFilter) {
@@ -126,30 +113,39 @@ export default function IssuesTable({
         <div className="flex items-center gap-2">
           <FontAwesomeIcon icon={faFilter} className="mr-2" />
           <label className="flex items-center gap-1">
-            Type:
+            State:
             <select
-              value={typeFilter}
+              value={stateFilter}
               onChange={(e) =>
-                setTypeFilter(
-                  e.target.value as "all" | "feature request" | "bug" | "other",
-                )
+                setStateFilter(e.target.value as "all" | "open" | "closed")
               }
               className="px-2 py-1 text-sm border rounded"
             >
               <option value="all">all</option>
-              <option value="feature request">feature request</option>
-              <option value="bug">bug</option>
-              <option value="other">other</option>
+              <option value="open">open</option>
+              <option value="closed">closed</option>
             </select>
           </label>
           <label className="flex items-center gap-1">
-            Reporter:
+            Draft:
             <select
-              value={reporterFilter}
+              value={draftFilter}
               onChange={(e) =>
-                setReporterFilter(
-                  e.target.value as "all" | "not me" | "only me",
-                )
+                setDraftFilter(e.target.value as "all" | "draft" | "not draft")
+              }
+              className="px-2 py-1 text-sm border rounded"
+            >
+              <option value="all">all</option>
+              <option value="draft">draft</option>
+              <option value="not draft">not draft</option>
+            </select>
+          </label>
+          <label className="flex items-center gap-1">
+            Author:
+            <select
+              value={authorFilter}
+              onChange={(e) =>
+                setAuthorFilter(e.target.value as "all" | "not me" | "only me")
               }
               className="px-2 py-1 text-sm border rounded"
             >
@@ -194,10 +190,10 @@ export default function IssuesTable({
                 Title
               </th>
               <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
-                Repo
+                State
               </th>
               <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
-                Reporter
+                Author
               </th>
               <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
                 Labels
@@ -208,37 +204,46 @@ export default function IssuesTable({
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-100">
-            {filteredIssues.map((i) => (
-              <tr key={i.id}>
+            {filteredPRs.map((pr) => (
+              <tr key={pr.id}>
                 <td className="px-4 py-2 text-sm">
                   <Link
                     className="text-blue-600 hover:underline"
-                    href={`https://github.com/${i.repo_full_name || ""}/issues/${i.number}`}
+                    href={`https://github.com/${repoFullName}/pull/${pr.number}`}
                     target="_blank"
                   >
-                    {i.title}
+                    #{pr.number} {pr.title}
+                    {pr.draft && (
+                      <span className="ml-2 text-xs text-gray-500">
+                        (Draft)
+                      </span>
+                    )}
                     <FontAwesomeIcon icon={faExternalLink} className="ml-2" />
                   </Link>
                 </td>
                 <td className="px-4 py-2 text-sm text-gray-600">
-                  {i.repo_full_name || "N/A"}
+                  <span
+                    className={`px-2 py-0.5 text-xs font-medium rounded ${
+                      pr.state === "open"
+                        ? "bg-green-100 text-green-800"
+                        : "bg-gray-100 text-gray-800"
+                    }`}
+                  >
+                    {pr.state}
+                  </span>
+                  {pr.merged && (
+                    <span className="ml-2 px-2 py-0.5 text-xs font-medium rounded bg-purple-100 text-purple-800">
+                      Merged
+                    </span>
+                  )}
                 </td>
                 <td className="px-4 py-2 text-sm text-gray-600">
-                  <div className="flex items-center gap-2">
-                    {i.author_avatar_url && (
-                      <img
-                        src={i.author_avatar_url}
-                        alt={i.author_login}
-                        className="w-6 h-6 rounded-full"
-                      />
-                    )}
-                    <span>{i.author_login}</span>
-                  </div>
+                  {pr.author_login}
                 </td>
                 <td className="px-4 py-2 text-sm">
                   <div className="flex flex-wrap gap-1">
                     {(() => {
-                      const labels = i.labels as Array<{
+                      const labels = pr.labels as Array<{
                         name: string;
                         color?: string;
                       }> | null;
@@ -278,7 +283,7 @@ export default function IssuesTable({
                   </div>
                 </td>
                 <td className="px-4 py-2 text-sm text-gray-600">
-                  <TimeAgo dateString={i.updated_at} />
+                  <TimeAgo dateString={pr.updated_at} />
                 </td>
               </tr>
             ))}

@@ -10,6 +10,7 @@ import {
   PAGE_SIZE,
 } from "../../../../lib/queries";
 import IssuesTable from "../../../components/IssuesTable";
+import PullRequestsTable from "../../../components/PullRequestsTable";
 
 interface RepoPageProps {
   params: {
@@ -78,32 +79,17 @@ export default async function RepoPage({ params }: RepoPageProps) {
         </div>
       </section>
 
-      <section>
+      <section className="mb-8">
         <h2 className="text-xl font-semibold mb-3">Pull Requests</h2>
         {pullRequests.length === 0 ? (
           <p className="text-gray-600 text-sm">No pull requests found.</p>
         ) : (
-          <ul className="space-y-3">
-            {pullRequests.map((pr) => (
-              <li
-                key={pr.id}
-                className="border-b border-gray-200 pb-3 last:border-b-0"
-              >
-                <Link
-                  href={`https://github.com/${repo.full_name}/pull/${pr.number}`}
-                  className="text-blue-600 hover:underline font-medium"
-                  target="_blank"
-                >
-                  #{pr.number} {pr.title}
-                </Link>
-                <div className="text-sm text-gray-600">
-                  State: {pr.state}
-                  {pr.draft ? " • Draft" : ""} • Updated:{" "}
-                  {new Date(pr.updated_at).toLocaleString()}
-                </div>
-              </li>
-            ))}
-          </ul>
+          <PullRequestsTable
+            pullRequests={pullRequests}
+            repoFullName={repo.full_name}
+            page={1}
+            totalPages={Math.ceil(pullRequests.length / PAGE_SIZE)}
+          />
         )}
       </section>
 
