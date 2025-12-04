@@ -60,6 +60,7 @@ export interface PullRequestRow {
   updated_at: string;
   closed_at: string | null;
   synced_at: string;
+  repo_full_name?: string; // Optional, populated when joined with repos table
 }
 
 export interface RepoStatsRow {
@@ -218,4 +219,42 @@ export async function getIssuesByAuthor(
   );
   const total = totalResult[0].count;
   return { issues, total };
+}
+
+/**
+ * Gets all pull requests where author_login does NOT contain "bot", ordered by updated_at descending.
+ * Includes repository full name for display.
+ *
+ * @returns Array of pull request rows with repository full name
+ */
+export async function getNonBotPullRequests(): Promise<PullRequestRow[]> {
+  return query<PullRequestRow>(
+    `SELECT
+      pr.id,
+      pr.github_id,
+      pr.repo_github_id,
+      pr.number,
+      pr.title,
+      pr.body,
+      pr.state,
+      pr.draft,
+      pr.author_login,
+      pr.assignees,
+      pr.labels,
+      pr.additions,
+      pr.deletions,
+      pr.changed_files,
+      pr.merged,
+      pr.merged_at,
+      pr.merge_commit_sha,
+      pr.created_at,
+      pr.updated_at,
+      pr.closed_at,
+      pr.synced_at,
+      r.full_name as repo_full_name
+    FROM pull_requests pr
+    INNER JOIN repos r ON pr.repo_github_id = r.github_id
+    WHERE LOWER(pr.author_login) NOT LIKE '%bot%'
+    ORDER BY pr.updated_at DESC`,
+  );
 }

@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUser } from "../lib/auth";
-import { getOrgs } from "../lib/queries";
+import { getOrgs, getNonBotPullRequests, PAGE_SIZE } from "../lib/queries";
+import PullRequestsTable from "./components/PullRequestsTable";
 
 export default async function HomePage() {
   const user = await getCurrentUser();
@@ -20,12 +21,15 @@ export default async function HomePage() {
     );
   }
 
-  const orgs = await getOrgs();
+  const [orgs, nonBotPRs] = await Promise.all([
+    getOrgs(),
+    getNonBotPullRequests(),
+  ]);
 
   return (
-    <div className="container mx-auto px-4 py-8 max-w-4xl">
+    <div className="container mx-auto px-4 py-8 max-w-full">
       <h1 className="text-3xl font-bold mb-6">Organizations</h1>
-      <ul className="space-y-2">
+      <ul className="space-y-2 mb-12">
         {orgs.map((org) => (
           <li
             key={org}
@@ -40,6 +44,22 @@ export default async function HomePage() {
           </li>
         ))}
       </ul>
+
+      <section>
+        <h2 className="text-2xl font-semibold mb-4">
+          Pull Requests (Non-Bot Authors)
+        </h2>
+        {nonBotPRs.length === 0 ? (
+          <p className="text-gray-600 text-sm">No pull requests found.</p>
+        ) : (
+          <PullRequestsTable
+            pullRequests={nonBotPRs}
+            repoFullName=""
+            page={1}
+            totalPages={Math.ceil(nonBotPRs.length / PAGE_SIZE)}
+          />
+        )}
+      </section>
     </div>
   );
 }

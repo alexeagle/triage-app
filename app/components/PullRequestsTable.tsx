@@ -106,6 +106,9 @@ export default function PullRequestsTable({
     return true;
   });
 
+  // Check if we should show the repo column (when PRs come from multiple repos)
+  const showRepoColumn = pullRequests.some((pr) => pr.repo_full_name);
+
   return (
     <div className="space-y-4">
       {/* Filtering */}
@@ -189,6 +192,11 @@ export default function PullRequestsTable({
               <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
                 Title
               </th>
+              {showRepoColumn && (
+                <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
+                  Repo
+                </th>
+              )}
               <th className="px-4 py-2 text-left text-sm font-medium text-gray-700">
                 State
               </th>
@@ -209,7 +217,7 @@ export default function PullRequestsTable({
                 <td className="px-4 py-2 text-sm">
                   <Link
                     className="text-blue-600 hover:underline"
-                    href={`https://github.com/${repoFullName}/pull/${pr.number}`}
+                    href={`https://github.com/${pr.repo_full_name || repoFullName}/pull/${pr.number}`}
                     target="_blank"
                   >
                     #{pr.number} {pr.title}
@@ -221,6 +229,11 @@ export default function PullRequestsTable({
                     <FontAwesomeIcon icon={faExternalLink} className="ml-2" />
                   </Link>
                 </td>
+                {showRepoColumn && (
+                  <td className="px-4 py-2 text-sm text-gray-600">
+                    {pr.repo_full_name || "N/A"}
+                  </td>
+                )}
                 <td className="px-4 py-2 text-sm text-gray-600">
                   <span
                     className={`px-2 py-0.5 text-xs font-medium rounded ${
