@@ -1,11 +1,11 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
-import { getCurrentUser } from "../../../lib/auth";
+import { getCurrentUser } from "../../lib/auth";
 import {
   getReposByOrg,
   getRepoStats,
   type RepoRow,
-} from "../../../lib/queries";
+} from "../../lib/queries";
 
 interface OrgPageProps {
   params: {
@@ -47,7 +47,7 @@ export default async function OrgPage({ params }: OrgPageProps) {
     <div className="container mx-auto px-4 py-8 max-w-4xl">
       <div className="mb-6">
         <Link
-          href="/repos"
+          href="/"
           className="text-blue-600 hover:text-blue-800 hover:underline text-sm"
         >
           ← Back to Organizations
@@ -65,7 +65,7 @@ export default async function OrgPage({ params }: OrgPageProps) {
               className="border-b border-gray-200 pb-2 last:border-b-0"
             >
               <Link
-                href={`/repos/${params.org}/${repoName}`}
+                href={`/${params.org}/${repoName}`}
                 className="text-blue-600 hover:text-blue-800 hover:underline font-medium"
               >
                 {repo.full_name}

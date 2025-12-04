@@ -1,16 +1,16 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
-import { authOptions } from "../../../../lib/authConfig";
+import { authOptions } from "../../../lib/authConfig";
 import {
   getReposByOrg,
   getRepoIssues,
   getRepoPullRequests,
   IssueRow,
   PAGE_SIZE,
-} from "../../../../lib/queries";
-import IssuesTable from "../../../components/IssuesTable";
-import PullRequestsTable from "../../../components/PullRequestsTable";
+} from "../../../lib/queries";
+import IssuesTable from "../../components/IssuesTable";
+import PullRequestsTable from "../../components/PullRequestsTable";
 
 interface RepoPageProps {
   params: {
@@ -43,7 +43,7 @@ export default async function RepoPage({ params }: RepoPageProps) {
     <div className="container mx-auto px-4 py-8 w-full">
       <div className="mb-6">
         <Link
-          href={`/repos/${params.org}`}
+          href={`/${params.org}`}
           className="text-blue-600 hover:text-blue-800 hover:underline text-sm"
         >
           ← Back to {params.org}
