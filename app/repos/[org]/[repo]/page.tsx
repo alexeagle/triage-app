@@ -78,24 +78,6 @@ export default async function RepoPage({ params }: RepoPageProps) {
         </div>
       </section>
 
-      <section className="mb-8">
-        <h2 className="text-xl font-semibold mb-3">Issues</h2>
-        {issues.length === 0 ? (
-          <p className="text-gray-600 text-sm">No issues found.</p>
-        ) : (
-          <IssuesTable
-            issues={issues.map(
-              (issue): IssueRow => ({
-                ...issue,
-                repo_full_name: repo.full_name,
-              }),
-            )}
-            page={1}
-            totalPages={Math.ceil(issues.length / PAGE_SIZE)}
-          />
-        )}
-      </section>
-
       <section>
         <h2 className="text-xl font-semibold mb-3">Pull Requests</h2>
         {pullRequests.length === 0 ? (
@@ -122,6 +104,24 @@ export default async function RepoPage({ params }: RepoPageProps) {
               </li>
             ))}
           </ul>
+        )}
+      </section>
+
+      <section className="mb-8">
+        <h2 className="text-xl font-semibold mb-3">Issues</h2>
+        {issues.length === 0 ? (
+          <p className="text-gray-600 text-sm">No issues found.</p>
+        ) : (
+          <IssuesTable
+            issues={issues.map(
+              (issue): IssueRow => ({
+                ...issue,
+                repo_full_name: repo.full_name,
+              }),
+            )}
+            page={1}
+            totalPages={Math.ceil(issues.length / PAGE_SIZE)}
+          />
         )}
       </section>
     </div>

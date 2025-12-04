@@ -53,7 +53,7 @@ export default async function OrgPage({ params }: OrgPageProps) {
           ← Back to Organizations
         </Link>
         <h1 className="text-3xl font-bold mt-2">
-          Repositories in {params.org}
+          Repositories in {params.org} with open issues or PRs
         </h1>
       </div>
       <ul className="space-y-2">
