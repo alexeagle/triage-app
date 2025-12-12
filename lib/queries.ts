@@ -164,6 +164,24 @@ export async function getOrgs(): Promise<string[]> {
 }
 
 /**
+ * Gets repository counts per organization.
+ *
+ * @returns Array of objects with org name and repo count
+ */
+export async function getRepoCountsByOrg(): Promise<
+  Array<{ org: string; count: number }>
+> {
+  return query<{ org: string; count: number }>(
+    `SELECT 
+       SPLIT_PART(full_name, '/', 1) as org,
+       COUNT(*)::int as count
+     FROM repos
+     GROUP BY org
+     ORDER BY org ASC`,
+  );
+}
+
+/**
  * Gets all repositories for a specific organization.
  *
  * @param org - Organization name
@@ -236,6 +254,19 @@ export async function getTotalOpenIssues(): Promise<number> {
      FROM issues
      WHERE state = 'open'
        AND LOWER(author_login) NOT LIKE '%bot%'`,
+  );
+  return result[0]?.count ?? 0;
+}
+
+/**
+ * Gets total count of repositories in the database.
+ *
+ * @returns Total number of repositories
+ */
+export async function getTotalRepoCount(): Promise<number> {
+  const result = await query<{ count: number }>(
+    `SELECT COUNT(*)::int as count
+     FROM repos`,
   );
   return result[0]?.count ?? 0;
 }

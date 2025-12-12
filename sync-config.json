@@ -16,7 +16,7 @@
     "exclude": []
   },
   "bazelbuild": {
-    "include": ["rules_rust"],
+    "include": ["rules_*"],
     "exclude": []
   }
 }

@@ -13,6 +13,7 @@ interface PullRequestsTableProps {
   repoFullName: string;
   page: number;
   totalPages: number;
+  defaultTimeFilter?: "all" | "day" | "week" | "month" | "year";
 }
 
 export default function PullRequestsTable({
@@ -20,13 +21,11 @@ export default function PullRequestsTable({
   repoFullName,
   page,
   totalPages,
+  defaultTimeFilter = "all",
 }: PullRequestsTableProps) {
   const router = useRouter();
   const { data: session } = useSession();
 
-  const [stateFilter, setStateFilter] = useState<"all" | "open" | "closed">(
-    "all",
-  );
   const [draftFilter, setDraftFilter] = useState<"all" | "draft" | "not draft">(
     "all",
   );
@@ -35,7 +34,7 @@ export default function PullRequestsTable({
   >("all");
   const [timeFilter, setTimeFilter] = useState<
     "all" | "day" | "week" | "month" | "year"
-  >("all");
+  >(defaultTimeFilter);
 
   const go = (p: number) => {
     router.push(`?page=${p}`);
@@ -43,13 +42,6 @@ export default function PullRequestsTable({
 
   // Filter pull requests
   const filteredPRs = pullRequests.filter((pr) => {
-    // Apply state filter
-    if (stateFilter !== "all") {
-      if (pr.state !== stateFilter) {
-        return false;
-      }
-    }
-
     // Apply draft filter
     if (draftFilter === "draft") {
       if (!pr.draft) {
@@ -115,20 +107,6 @@ export default function PullRequestsTable({
       <div className="flex items-center justify-between bg-blue-100 p-2 rounded-lg">
         <div className="flex items-center gap-2">
           <FontAwesomeIcon icon={faFilter} className="mr-2" />
-          <label className="flex items-center gap-1">
-            State:
-            <select
-              value={stateFilter}
-              onChange={(e) =>
-                setStateFilter(e.target.value as "all" | "open" | "closed")
-              }
-              className="px-2 py-1 text-sm border rounded"
-            >
-              <option value="all">all</option>
-              <option value="open">open</option>
-              <option value="closed">closed</option>
-            </select>
-          </label>
           <label className="flex items-center gap-1">
             Draft:
             <select

@@ -7,10 +7,14 @@ import {
   getTopReposByOpenPRs,
   getTotalOpenPRs,
   getTotalOpenIssues,
+  getTotalRepoCount,
+  getRepoCountsByOrg,
   PAGE_SIZE,
 } from "../lib/queries";
 import PullRequestsTable from "./components/PullRequestsTable";
 import PRCountBarChart from "./components/PRCountBarChart";
+import { faBuilding } from "@fortawesome/free-solid-svg-icons";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
 export default async function HomePage() {
   const user = await getCurrentUser();
@@ -18,25 +22,43 @@ export default async function HomePage() {
   if (!user) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-full">
-        <p className="text-gray-600 mb-6">Please log in to continue.</p>
+        <p className="text-gray-600 mb-6">
+          Hey there! I gotta ask you to log in so the app can show filters
+          specific to your user.
+        </p>
         <a
           href="/api/auth/signin"
           className="inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
         >
-          Sign in with GitHub
+          Grant read-only access to GitHub Email addresses and profile
+          information
         </a>
       </div>
     );
   }
 
-  const [orgs, nonBotPRs, topReposByPRs, totalOpenPRs, totalOpenIssues] =
-    await Promise.all([
-      getOrgs(),
-      getNonBotPullRequests(),
-      getTopReposByOpenPRs(20),
-      getTotalOpenPRs(),
-      getTotalOpenIssues(),
-    ]);
+  const [
+    orgs,
+    repoCountsByOrg,
+    nonBotPRs,
+    topReposByPRs,
+    totalOpenPRs,
+    totalOpenIssues,
+    totalRepoCount,
+  ] = await Promise.all([
+    getOrgs(),
+    getRepoCountsByOrg(),
+    getNonBotPullRequests(),
+    getTopReposByOpenPRs(20),
+    getTotalOpenPRs(),
+    getTotalOpenIssues(),
+    getTotalRepoCount(),
+  ]);
+
+  // Create a map for quick lookup of repo counts by org
+  const repoCountMap = new Map(
+    repoCountsByOrg.map((item) => [item.org, item.count]),
+  );
 
   // Calculate "other" counts (PRs and issues in repos outside top 20)
   const top20PRCount = topReposByPRs.reduce(
@@ -52,21 +74,25 @@ export default async function HomePage() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-full">
-      <h1 className="text-3xl font-bold mb-6">Organizations</h1>
       <ul className="space-y-2 mb-12">
-        {orgs.map((org) => (
-          <li
-            key={org}
-            className="border-b border-gray-200 pb-2 last:border-b-0"
-          >
-            <Link
-              href={`/${org}`}
-              className="text-blue-600 hover:text-blue-800 hover:underline font-medium text-lg"
-            >
-              {org}
-            </Link>
-          </li>
-        ))}
+        {orgs.map((org) => {
+          const repoCount = repoCountMap.get(org) ?? 0;
+          return (
+            <li key={org} className="pb-2">
+              <FontAwesomeIcon icon={faBuilding} className="w-4 h-4 mr-2" />
+              <Link
+                href={`/${org}`}
+                className="text-blue-600 hover:text-blue-800 hover:underline font-medium text-lg"
+              >
+                {org}
+              </Link>
+              <span className="text-sm text-gray-600">
+                {" "}
+                ({repoCount} repo{repoCount !== 1 ? "s" : ""})
+              </span>
+            </li>
+          );
+        })}
       </ul>
 
       <h2 className="text-2xl font-semibold mb-4">
@@ -87,6 +113,7 @@ export default async function HomePage() {
           repos={topReposByPRs}
           otherPRCount={otherPRCount}
           otherIssueCount={otherIssueCount}
+          otherRepoCount={Math.max(0, totalRepoCount - topReposByPRs.length)}
           showOther={otherPRCount > 0 || otherIssueCount > 0}
         />
       </div>
@@ -103,6 +130,7 @@ export default async function HomePage() {
             repoFullName=""
             page={1}
             totalPages={Math.ceil(nonBotPRs.length / PAGE_SIZE)}
+            defaultTimeFilter="day"
           />
         )}
       </section>

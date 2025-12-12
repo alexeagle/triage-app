@@ -14,6 +14,7 @@ interface PRCountBarChartProps {
   repos: RepoWithPRCount[];
   otherPRCount?: number;
   otherIssueCount?: number;
+  otherRepoCount?: number;
   showOther?: boolean;
 }
 
@@ -21,6 +22,7 @@ export default function PRCountBarChart({
   repos,
   otherPRCount = 0,
   otherIssueCount = 0,
+  otherRepoCount = 0,
   showOther = false,
 }: PRCountBarChartProps) {
   if (repos.length === 0 && otherPRCount === 0 && otherIssueCount === 0) {
@@ -105,7 +107,7 @@ export default function PRCountBarChart({
               className="text-gray-600 font-medium text-sm min-w-0 flex-shrink-0"
               style={{ width: "300px" }}
             >
-              Other repositories
+              Other {`${otherRepoCount}`} repositories
             </span>
             <div className="flex-1 relative h-6 flex gap-0.5">
               {/* Side-by-side bars for "Other": PRs on left, Issues on right */}

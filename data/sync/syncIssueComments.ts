@@ -33,7 +33,9 @@ export async function syncIssueComments(): Promise<number> {
   let totalCommentsSynced = 0;
 
   try {
-    // Fetch all open issues with their repository information
+    // Fetch open issues that need comment syncing:
+    // - Issues with no comments yet, OR
+    // - Issues that have been updated since the last comment was synced
     const issues = await query<IssueWithRepo>(
       `SELECT 
         i.github_id,
@@ -43,7 +45,18 @@ export async function syncIssueComments(): Promise<number> {
         SPLIT_PART(r.full_name, '/', 2) as repo_name
       FROM issues i
       INNER JOIN repos r ON i.repo_github_id = r.github_id
+      LEFT JOIN (
+        SELECT 
+          issue_github_id,
+          MAX(synced_at) as last_comment_sync
+        FROM issue_comments
+        GROUP BY issue_github_id
+      ) ic ON i.github_id = ic.issue_github_id
       WHERE i.state = 'open'
+        AND (
+          ic.issue_github_id IS NULL  -- No comments synced yet
+          OR i.updated_at > ic.last_comment_sync  -- Issue updated since last comment sync
+        )
       ORDER BY i.github_id`,
     );
 

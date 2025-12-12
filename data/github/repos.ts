@@ -63,6 +63,53 @@ function loadSyncConfig(): SyncConfig {
 }
 
 /**
+ * Simple glob pattern matcher.
+ * Supports * wildcard (matches any characters).
+ *
+ * @param pattern - Glob pattern (e.g., "rules_*")
+ * @param text - Text to match against
+ * @returns True if text matches pattern
+ */
+function matchesGlob(pattern: string, text: string): boolean {
+  // Convert glob pattern to regex
+  const regexPattern = pattern
+    .replace(/[.+^${}()|[\]\\]/g, "\\$&") // Escape special regex chars
+    .replace(/\*/g, ".*"); // Replace * with .*
+  const regex = new RegExp(`^${regexPattern}$`);
+  return regex.test(text);
+}
+
+/**
+ * Checks if a repository matches any pattern in a list.
+ * Supports both exact matches and glob patterns (e.g., "rules_*").
+ *
+ * @param repo - Repository to check
+ * @param patterns - Array of patterns (exact strings or glob patterns)
+ * @returns True if repo matches any pattern
+ */
+function repoMatchesPatterns(repo: Repo, patterns: string[]): boolean {
+  const repoName = repo.name;
+  const fullName = repo.full_name;
+  const repoNameOnly = fullName.split("/")[1] || repoName;
+
+  return patterns.some((pattern) => {
+    // Check if pattern contains wildcard
+    if (pattern.includes("*")) {
+      return (
+        matchesGlob(pattern, fullName) ||
+        matchesGlob(pattern, repoName) ||
+        matchesGlob(pattern, repoNameOnly)
+      );
+    } else {
+      // Exact match
+      return (
+        pattern === fullName || pattern === repoName || pattern === repoNameOnly
+      );
+    }
+  });
+}
+
+/**
  * Filters repositories based on sync configuration.
  *
  * @param repos - All repositories from the org
@@ -70,33 +117,22 @@ function loadSyncConfig(): SyncConfig {
  * @returns Filtered list of repositories to sync
  */
 function filterReposByConfig(repos: Repo[], config: OrgSyncConfig): Repo[] {
-  const excludeSet = new Set(config.exclude || []);
+  const excludePatterns = config.exclude || [];
 
   // First, apply include filter
   let included: Repo[];
   if (config.include === "*") {
     included = repos;
   } else {
-    // Filter to only repos in the include list
-    const includeSet = new Set(config.include);
+    // Filter to only repos matching include patterns (supports glob patterns)
     included = repos.filter((repo) => {
-      // Match by full_name (owner/repo) or just repo name
-      return (
-        includeSet.has(repo.full_name) ||
-        includeSet.has(repo.name) ||
-        includeSet.has(repo.full_name.split("/")[1])
-      );
+      return repoMatchesPatterns(repo, config.include);
     });
   }
 
-  // Then, apply exclude filter
+  // Then, apply exclude filter (supports glob patterns)
   return included.filter((repo) => {
-    // Exclude if matches any exclude pattern
-    return !(
-      excludeSet.has(repo.full_name) ||
-      excludeSet.has(repo.name) ||
-      excludeSet.has(repo.full_name.split("/")[1])
-    );
+    return !repoMatchesPatterns(repo, excludePatterns);
   });
 }
 

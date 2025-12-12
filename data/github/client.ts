@@ -4,7 +4,11 @@
  * This module provides a wrapper around the GitHub REST API with:
  * - Automatic retry logic for transient failures
  * - Rate limit handling and backoff
- * - Automatic installation token injection
+ * - Automatic token injection (supports both PAT and installation tokens)
+ *
+ * Authentication priority:
+ * 1. GITHUB_TOKEN or GITHUB_PAT environment variable (Personal Access Token)
+ * 2. GitHub App installation token (via APP_ID, PRIVATE_KEY, INSTALLATION_ID)
  */
 
 import { request } from "@octokit/request";
@@ -22,9 +26,18 @@ export class GitHubAPI {
   private tokenExpiresAt: number = 0;
 
   /**
-   * Gets a valid installation token, refreshing if necessary.
+   * Gets a valid authentication token.
+   * If GITHUB_TOKEN or GITHUB_PAT is set, uses that (Personal Access Token).
+   * Otherwise, falls back to GitHub App installation token.
    */
   private async getToken(): Promise<string> {
+    // Check for Personal Access Token first (for when installation is rate-limited)
+    const pat = process.env.GITHUB_TOKEN || process.env.GITHUB_PAT;
+    if (pat) {
+      return pat;
+    }
+
+    // Fall back to installation token
     const now = Date.now();
     // Refresh token if expired or expiring soon (within 5 minutes)
     if (!this.installationToken || this.tokenExpiresAt < now + 5 * 60 * 1000) {
