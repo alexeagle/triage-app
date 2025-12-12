@@ -173,6 +173,63 @@ export async function getReposByOrg(org: string): Promise<RepoRow[]> {
 
 export const PAGE_SIZE = 20;
 
+export interface IssueTurnRow {
+  issue_github_id: number;
+  repo_full_name: string;
+  issue_number: number;
+  title: string;
+  turn: "maintainer" | "author";
+  last_comment_at: string | null;
+  last_comment_author: string | null;
+}
+
+/**
+ * Gets all open issues with their "turn" status (whose turn is it to respond).
+ * Uses the issue_turns view to compute turn logic based on comment history.
+ *
+ * @returns Array of issue turn rows
+ */
+export async function getIssueTurns(): Promise<IssueTurnRow[]> {
+  return query<IssueTurnRow>(
+    `SELECT 
+      issue_github_id,
+      repo_full_name,
+      issue_number,
+      title,
+      turn,
+      last_comment_at,
+      last_comment_author
+    FROM issue_turns
+    ORDER BY issue_github_id`,
+  );
+}
+
+/**
+ * Gets issue turns for a specific repository.
+ *
+ * @param repoGithubId - GitHub ID of the repository
+ * @returns Array of issue turn rows for that repository
+ */
+export async function getIssueTurnsByRepo(
+  repoGithubId: number,
+): Promise<IssueTurnRow[]> {
+  return query<IssueTurnRow>(
+    `SELECT 
+      it.issue_github_id,
+      it.repo_full_name,
+      it.issue_number,
+      it.title,
+      it.turn,
+      it.last_comment_at,
+      it.last_comment_author
+    FROM issue_turns it
+    INNER JOIN issues i ON it.issue_github_id = i.github_id
+    WHERE i.repo_github_id = $1
+    ORDER BY it.issue_github_id`,
+    [repoGithubId],
+  );
+}
+
 /**
  * Gets open issues by author login, ordered by updated_at descending.
  *
