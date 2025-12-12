@@ -13,6 +13,7 @@ import {
 } from "../lib/queries";
 import PullRequestsTable from "./components/PullRequestsTable";
 import PRCountBarChart from "./components/PRCountBarChart";
+import InfoTooltip from "./components/InfoTooltip";
 import { faBuilding } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
@@ -95,8 +96,40 @@ export default async function HomePage() {
         })}
       </ul>
 
-      <h2 className="text-2xl font-semibold mb-4">
-        Open Human-authored PRs and Issues by repo (Top 20)
+      <h2 className="text-2xl font-semibold mb-4 flex items-center">
+        Human-authored PRs/Issues waiting on Maintainer (Top 20 repos)
+        <InfoTooltip
+          content={
+            <div className="space-y-2">
+              <div>
+                <strong className="text-white">Maintainers:</strong>
+                <p className="text-gray-300 text-xs mt-1">
+                  Identified from three sources: (1) GitHub Collaborators API
+                  (admin/maintain/write permissions), (2) CODEOWNERS files, and
+                  (3) .bcr/metadata.template.json files. Users are marked as
+                  maintainers when detected from any of these sources.
+                </p>
+              </div>
+              <div>
+                <strong className="text-white">Whose Turn:</strong>
+                <p className="text-gray-300 text-xs mt-1">
+                  Determined by comment history: If no maintainer has commented,
+                  it's the maintainer's turn. If the last comment was by a
+                  maintainer, it's the author's turn. This chart only shows
+                  items where it's the maintainer's turn to respond.
+                </p>
+              </div>
+              <div>
+                <strong className="text-white">Human-authored:</strong>
+                <p className="text-gray-300 text-xs mt-1">
+                  Excludes any PRs or issues where the author's login contains
+                  "bot" (case-insensitive). This filters out automated accounts
+                  and GitHub Actions bots.
+                </p>
+              </div>
+            </div>
+          }
+        />
       </h2>
       <div className="mb-4 text-sm text-gray-600">
         <span className="inline-flex items-center gap-2 mr-4">
