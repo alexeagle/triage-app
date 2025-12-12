@@ -17,9 +17,9 @@ CREATE TABLE repo_maintainers (
     last_confirmed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()  -- When this maintainership was last confirmed/updated
 );
 
--- Unique constraint to ensure one maintainership record per repo/user/source combination
--- This prevents duplicates when syncing the same maintainership from multiple sources
-CREATE UNIQUE INDEX idx_repo_maintainers_unique ON repo_maintainers(repo_github_id, github_user_id, source);
+-- Unique constraint to ensure one maintainership record per repo/user combination
+-- This prevents duplicates - each user can only appear once per repository, regardless of source
+CREATE UNIQUE INDEX idx_repo_maintainers_unique ON repo_maintainers(repo_github_id, github_user_id);
 
 -- Indexes for common query patterns
 -- Efficiently query "which repos does this user maintain?"

@@ -9,6 +9,7 @@ import { query } from "./index.js";
 /**
  * Upserts a maintainership relationship into the database.
  * Inserts if the relationship doesn't exist, updates if it does.
+ * When a maintainer is detected from multiple sources, combines sources and uses the highest confidence.
  * Updates last_confirmed_at timestamp on existing relationships.
  *
  * @param repoGithubId - GitHub ID of the repository
@@ -27,9 +28,19 @@ export async function upsertMaintainer(
       repo_github_id, github_user_id, source, confidence,
       first_detected_at, last_confirmed_at
     ) VALUES ($1, $2, $3, $4, NOW(), NOW())
-    ON CONFLICT (repo_github_id, github_user_id, source)
+    ON CONFLICT (repo_github_id, github_user_id)
     DO UPDATE SET
-      confidence = EXCLUDED.confidence,
+      source = CASE
+        -- If sources are the same, keep it
+        WHEN repo_maintainers.source = EXCLUDED.source THEN repo_maintainers.source
+        -- If existing source already contains the new source, keep existing
+        WHEN repo_maintainers.source LIKE '%' || EXCLUDED.source || '%' THEN repo_maintainers.source
+        -- If new source contains existing source, use new (shouldn't happen, but handle it)
+        WHEN EXCLUDED.source LIKE '%' || repo_maintainers.source || '%' THEN EXCLUDED.source
+        -- Otherwise, combine with comma
+        ELSE repo_maintainers.source || ',' || EXCLUDED.source
+      END,
+      confidence = GREATEST(repo_maintainers.confidence, EXCLUDED.confidence),
       last_confirmed_at = NOW()`,
     [repoGithubId, githubUserId, source, confidence],
   );

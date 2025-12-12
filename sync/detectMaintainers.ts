@@ -11,6 +11,8 @@ import {
   getGitHubUserIdByLogin,
 } from "../data/db/repoMaintainers.js";
 import type { Repo } from "../data/github/repos.js";
+import { GitHubAPI } from "../data/github/client.js";
+import { fetchRepoFile } from "../data/github/files.js";
 
 /**
  * Contributor with optional permission information.
@@ -28,6 +30,19 @@ export interface Contributor {
  */
 export interface BcrMetadata {
   maintainers?: string[]; // Array of GitHub usernames
+}
+
+/**
+ * BCR metadata template structure from .bcr/metadata.template.json
+ */
+export interface BcrMetadataTemplate {
+  homepage?: string;
+  maintainers?: Array<{
+    email?: string;
+    github?: string;
+    github_user_id?: number;
+    name?: string;
+  }>;
 }
 
 /**
@@ -121,17 +136,91 @@ export async function detectMaintainersFromBcrMetadata(
 }
 
 /**
+ * Parses CODEOWNERS file content and extracts usernames.
+ * Handles GitHub CODEOWNERS format (lines starting with paths, followed by @usernames or emails).
+ *
+ * @param content - CODEOWNERS file content
+ * @returns Array of GitHub usernames (without @ prefix)
+ */
+function parseCodeowners(content: string): string[] {
+  const usernames = new Set<string>();
+  const lines = content.split("\n");
+
+  for (const line of lines) {
+    // Skip comments and empty lines
+    const trimmed = line.trim();
+    if (!trimmed || trimmed.startsWith("#")) {
+      continue;
+    }
+
+    // Split by whitespace and extract usernames/emails
+    const parts = trimmed.split(/\s+/);
+    for (const part of parts) {
+      // Skip path patterns (they don't start with @)
+      if (part.startsWith("@")) {
+        // Remove @ prefix
+        usernames.add(part.substring(1));
+      } else if (part.includes("@") && part.includes(".")) {
+        // Email address - extract username part if it's a GitHub email
+        // Format: username@users.noreply.github.com
+        const emailMatch = part.match(/^([^@]+)@users\.noreply\.github\.com$/);
+        if (emailMatch) {
+          usernames.add(emailMatch[1]);
+        }
+      }
+    }
+  }
+
+  return Array.from(usernames);
+}
+
+/**
+ * Fetches and parses CODEOWNERS file from GitHub repository.
+ *
+ * @param repo - Repository object
+ * @param api - GitHub API client instance
+ * @returns Array of usernames from CODEOWNERS, or null if file doesn't exist
+ */
+export async function fetchCodeownersFromRepo(
+  repo: Repo,
+  api: GitHubAPI,
+): Promise<string[] | null> {
+  // Try common CODEOWNERS locations
+  const codeownersPaths = [
+    "CODEOWNERS",
+    ".github/CODEOWNERS",
+    "docs/CODEOWNERS",
+  ];
+
+  for (const path of codeownersPaths) {
+    try {
+      const content = await fetchRepoFile(repo, path, api);
+      if (content) {
+        return parseCodeowners(content);
+      }
+    } catch (error) {
+      // Continue to next path
+      continue;
+    }
+  }
+
+  return null;
+}
+
+/**
  * Detects maintainers from CODEOWNERS file.
  * For each username in the CODEOWNERS list, looks up the GitHub user ID and upserts a maintainership record.
  * Uses lower confidence (90) since CODEOWNERS tends to over-include users.
  *
  * @param repo - Repository object from sync
  * @param codeowners - List of usernames parsed from CODEOWNERS file (if available)
+ * @param alsoMarkInUsersTable - If true, also mark users as maintainers in github_users table
  * @returns Array of detected maintainer user IDs
  */
 export async function detectMaintainersFromCodeowners(
   repo: Repo,
   codeowners: string[] | null | undefined,
+  alsoMarkInUsersTable: boolean = false,
 ): Promise<number[]> {
   const detected: number[] = [];
 
@@ -148,6 +237,13 @@ export async function detectMaintainersFromCodeowners(
       }
 
       await upsertMaintainer(repo.id, githubUserId, "codeowners", 90);
+
+      // Optionally mark in github_users table (for syncRepoMaintainers)
+      if (alsoMarkInUsersTable) {
+        const { markMaintainer } = await import("../data/db/githubUsers.js");
+        await markMaintainer(githubUserId, "codeowners");
+      }
+
       detected.push(githubUserId);
     } catch (error) {
       // Log but don't throw - continue processing other maintainers
@@ -160,6 +256,216 @@ export async function detectMaintainersFromCodeowners(
   }
 
   return detected;
+}
+
+/**
+ * Fetches and parses .bcr/metadata.template.json from GitHub repository.
+ *
+ * @param repo - Repository object
+ * @param api - GitHub API client instance
+ * @returns Parsed metadata template, or null if file doesn't exist
+ */
+export async function fetchBcrMetadataTemplate(
+  repo: Repo,
+  api: GitHubAPI,
+): Promise<BcrMetadataTemplate | null> {
+  try {
+    const content = await fetchRepoFile(
+      repo,
+      ".bcr/metadata.template.json",
+      api,
+    );
+    if (!content) {
+      return null;
+    }
+
+    const metadata = JSON.parse(content) as BcrMetadataTemplate;
+    return metadata;
+  } catch (error) {
+    // File not found or invalid JSON - return null
+    return null;
+  }
+}
+
+/**
+ * Detects maintainers from BCR metadata template file.
+ * Extracts GitHub handles from the maintainers array and upserts maintainership records.
+ *
+ * @param repo - Repository object from sync
+ * @param metadataTemplate - Parsed metadata template from .bcr/metadata.template.json
+ * @param alsoMarkInUsersTable - If true, also mark users as maintainers in github_users table
+ * @returns Array of detected maintainer user IDs
+ */
+export async function detectMaintainersFromBcrMetadataTemplate(
+  repo: Repo,
+  metadataTemplate: BcrMetadataTemplate | null | undefined,
+  alsoMarkInUsersTable: boolean = false,
+): Promise<number[]> {
+  const detected: number[] = [];
+
+  if (
+    !metadataTemplate ||
+    !metadataTemplate.maintainers ||
+    metadataTemplate.maintainers.length === 0
+  ) {
+    return detected;
+  }
+
+  for (const maintainer of metadataTemplate.maintainers) {
+    // Extract GitHub handle from maintainer object
+    const githubHandle = maintainer.github;
+    if (!githubHandle) {
+      continue;
+    }
+
+    try {
+      // Prefer github_user_id if available, otherwise look up by login
+      let githubUserId: number | null = null;
+      if (maintainer.github_user_id) {
+        githubUserId = maintainer.github_user_id;
+      } else {
+        githubUserId = await getGitHubUserIdByLogin(githubHandle);
+      }
+
+      if (githubUserId === null) {
+        // User not found in database - skip silently
+        continue;
+      }
+
+      await upsertMaintainer(repo.id, githubUserId, "bcr-metadata", 100);
+
+      // Optionally mark in github_users table (for syncRepoMaintainers)
+      if (alsoMarkInUsersTable) {
+        const { markMaintainer } = await import("../data/db/githubUsers.js");
+        await markMaintainer(githubUserId, "bcr-metadata");
+      }
+
+      detected.push(githubUserId);
+    } catch (error) {
+      // Log but don't throw - continue processing other maintainers
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.warn(
+        `Failed to upsert maintainer ${githubHandle} from BCR metadata template for repo ${repo.full_name}: ${errorMessage}`,
+      );
+    }
+  }
+
+  return detected;
+}
+
+/**
+ * Detects maintainers from CODEOWNERS and BCR metadata template files.
+ * This is used to supplement GitHub collaborators API data.
+ *
+ * @param repo - Repository object
+ * @param api - GitHub API client instance
+ * @param alsoMarkInUsersTable - If true, also mark users as maintainers in github_users table
+ * @returns Object with counts and user IDs from both sources
+ */
+export async function detectMaintainersFromFiles(
+  repo: Repo,
+  api: GitHubAPI,
+  alsoMarkInUsersTable: boolean = false,
+): Promise<{ codeowners: number[]; bcrMetadata: number[] }> {
+  const result = {
+    codeowners: [] as number[],
+    bcrMetadata: [] as number[],
+  };
+
+  // Try CODEOWNERS file
+  try {
+    const codeownersUsernames = await fetchCodeownersFromRepo(repo, api);
+    if (codeownersUsernames && codeownersUsernames.length > 0) {
+      const detected = await detectMaintainersFromCodeowners(
+        repo,
+        codeownersUsernames,
+        alsoMarkInUsersTable,
+      );
+      result.codeowners = detected;
+      if (detected.length > 0) {
+        console.log(`  ✓ Maintainers from CODEOWNERS: ${detected.length}`);
+      }
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.warn(
+      `  ⚠ Failed to fetch CODEOWNERS for ${repo.full_name}: ${errorMessage}`,
+    );
+  }
+
+  // Try BCR metadata template
+  try {
+    const metadataTemplate = await fetchBcrMetadataTemplate(repo, api);
+    if (
+      metadataTemplate &&
+      metadataTemplate.maintainers &&
+      metadataTemplate.maintainers.length > 0
+    ) {
+      const detected = await detectMaintainersFromBcrMetadataTemplate(
+        repo,
+        metadataTemplate,
+        alsoMarkInUsersTable,
+      );
+      result.bcrMetadata = detected;
+      if (detected.length > 0) {
+        console.log(
+          `  ✓ Maintainers from BCR metadata template: ${detected.length}`,
+        );
+      }
+    }
+  } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.warn(
+      `  ⚠ Failed to fetch BCR metadata template for ${repo.full_name}: ${errorMessage}`,
+    );
+  }
+
+  return result;
+}
+
+/**
+ * Attempts to detect maintainers from CODEOWNERS file as a fallback when permission errors occur.
+ * If CODEOWNERS is not found, tries .bcr/metadata.template.json as a second fallback.
+ * This is a helper function to reduce duplication between sync workers.
+ * @deprecated Use detectMaintainersFromFiles instead for comprehensive detection
+ *
+ * @param repo - Repository object
+ * @param api - GitHub API client instance
+ * @param alsoMarkInUsersTable - If true, also mark users as maintainers in github_users table
+ * @returns Object with count, user IDs, and source, or null if both fallbacks failed
+ */
+export async function fallbackToCodeowners(
+  repo: Repo,
+  api: GitHubAPI,
+  alsoMarkInUsersTable: boolean = false,
+): Promise<{
+  count: number;
+  userIds: number[];
+  source: "codeowners" | "bcr-metadata";
+} | null> {
+  const result = await detectMaintainersFromFiles(
+    repo,
+    api,
+    alsoMarkInUsersTable,
+  );
+
+  // Return first available source for backward compatibility
+  if (result.codeowners.length > 0) {
+    return {
+      count: result.codeowners.length,
+      userIds: result.codeowners,
+      source: "codeowners",
+    };
+  }
+  if (result.bcrMetadata.length > 0) {
+    return {
+      count: result.bcrMetadata.length,
+      userIds: result.bcrMetadata,
+      source: "bcr-metadata",
+    };
+  }
+  return null;
 }
 
 /**

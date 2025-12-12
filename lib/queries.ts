@@ -77,6 +77,15 @@ export interface RepoWithPRCount {
   open_issues_count: number;
 }
 
+export interface MaintainerRow {
+  github_user_id: number;
+  login: string;
+  avatar_url: string | null;
+  source: string;
+  confidence: number;
+  last_confirmed_at: string;
+}
+
 /**
  * Gets all repositories ordered by name.
  *
@@ -194,6 +203,31 @@ export async function getReposByOrg(org: string): Promise<RepoRow[]> {
      WHERE full_name LIKE $1
      ORDER BY name ASC`,
     [`${org}/%`],
+  );
+}
+
+/**
+ * Gets all maintainers for a repository with their source and confidence.
+ *
+ * @param repoGithubId - GitHub ID of the repository
+ * @returns Array of maintainer rows with source and confidence
+ */
+export async function getRepoMaintainers(
+  repoGithubId: number,
+): Promise<MaintainerRow[]> {
+  return query<MaintainerRow>(
+    `SELECT 
+      rm.github_user_id,
+      gu.login,
+      gu.avatar_url,
+      rm.source,
+      rm.confidence,
+      rm.last_confirmed_at
+     FROM repo_maintainers rm
+     INNER JOIN github_users gu ON rm.github_user_id = gu.github_id
+     WHERE rm.repo_github_id = $1
+     ORDER BY rm.confidence DESC, rm.source ASC, gu.login ASC`,
+    [repoGithubId],
   );
 }
 

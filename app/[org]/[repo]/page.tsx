@@ -6,7 +6,9 @@ import {
   getReposByOrg,
   getRepoIssues,
   getRepoPullRequests,
+  getRepoMaintainers,
   IssueRow,
+  MaintainerRow,
   PAGE_SIZE,
 } from "../../../lib/queries";
 import IssuesTable from "../../components/IssuesTable";
@@ -34,9 +36,10 @@ export default async function RepoPage({ params }: RepoPageProps) {
     notFound();
   }
 
-  const [issues, pullRequests] = await Promise.all([
+  const [issues, pullRequests, maintainers] = await Promise.all([
     getRepoIssues(repo.github_id),
     getRepoPullRequests(repo.github_id),
+    getRepoMaintainers(repo.github_id),
   ]);
 
   return (
@@ -76,6 +79,37 @@ export default async function RepoPage({ params }: RepoPageProps) {
               View on GitHub
             </Link>
           </p>
+          {maintainers.length > 0 && (
+            <div className="mt-3 pt-3 border-t border-gray-300">
+              <p className="font-semibold mb-2">Maintainers:</p>
+              <ul className="space-y-1">
+                {maintainers.map((maintainer: MaintainerRow) => (
+                  <li
+                    key={`${maintainer.github_user_id}-${maintainer.source}`}
+                    className="flex items-center gap-2"
+                  >
+                    {maintainer.avatar_url && (
+                      <img
+                        src={maintainer.avatar_url}
+                        alt={maintainer.login}
+                        className="w-5 h-5 rounded-full"
+                      />
+                    )}
+                    <Link
+                      href={`https://github.com/${maintainer.login}`}
+                      className="text-blue-600 hover:underline"
+                      target="_blank"
+                    >
+                      {maintainer.login}
+                    </Link>
+                    <span className="text-gray-500 text-xs">
+                      ({maintainer.source}, {maintainer.confidence}% confidence)
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </section>
 
@@ -100,7 +134,7 @@ export default async function RepoPage({ params }: RepoPageProps) {
         ) : (
           <IssuesTable
             issues={issues.map(
-              (issue): IssueRow => ({
+              (issue: IssueRow): IssueRow => ({
                 ...issue,
                 repo_full_name: repo.full_name,
               }),
