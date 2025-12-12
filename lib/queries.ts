@@ -76,6 +76,8 @@ export interface RepoWithPRCount {
   name: string;
   open_prs_count: number;
   open_issues_count: number;
+  stalled_prs_count?: number;
+  stalled_issues_count?: number;
 }
 
 export interface MaintainerRow {
@@ -256,12 +258,15 @@ export async function getRepoMaintainers(
 /**
  * Gets top repositories by open PR count.
  * Excludes issues/PRs where turn = 'author' (it's the author's turn to respond).
+ * Includes stalled counts based on stall_interval parameter.
  *
  * @param limit - Maximum number of repositories to return (default: 20)
- * @returns Array of repositories with open PR counts, sorted by count descending
+ * @param stallInterval - PostgreSQL interval string (e.g., '14 days') for determining if work is stalled
+ * @returns Array of repositories with open PR counts and stalled counts, sorted by count descending
  */
 export async function getTopReposByOpenPRs(
   limit: number = 20,
+  stallInterval: string = "14 days",
 ): Promise<RepoWithPRCount[]> {
   return query<RepoWithPRCount>(
     `SELECT 
@@ -279,7 +284,23 @@ export async function getTopReposByOpenPRs(
          AND LOWER(i.author_login) NOT LIKE '%bot%'
          AND (it_i.turn IS NULL OR it_i.turn != 'author')
          THEN i.id 
-       END)::int as open_issues_count
+       END)::int as open_issues_count,
+       COUNT(DISTINCT CASE 
+         WHEN pr.state = 'open' 
+         AND LOWER(pr.author_login) NOT LIKE '%bot%'
+         AND (it_pr.turn IS NULL OR it_pr.turn != 'author')
+         AND it_pr.turn = 'maintainer'
+         AND it_pr.last_maintainer_action_at < NOW() - $2::interval
+         THEN pr.id 
+       END)::int as stalled_prs_count,
+       COUNT(DISTINCT CASE 
+         WHEN i.state = 'open' 
+         AND LOWER(i.author_login) NOT LIKE '%bot%'
+         AND (it_i.turn IS NULL OR it_i.turn != 'author')
+         AND it_i.turn = 'maintainer'
+         AND it_i.last_maintainer_action_at < NOW() - $2::interval
+         THEN i.id 
+       END)::int as stalled_issues_count
      FROM repos r
      LEFT JOIN pull_requests pr ON r.github_id = pr.repo_github_id
      LEFT JOIN issue_turns it_pr ON pr.github_id = it_pr.issue_github_id
@@ -313,7 +334,7 @@ export async function getTopReposByOpenPRs(
        END)
      ) DESC
      LIMIT $1`,
-    [limit],
+    [limit, stallInterval],
   );
 }
 
@@ -380,6 +401,17 @@ export interface IssueTurnRow {
   stalled?: boolean;
 }
 
+export interface StalledWorkCounts {
+  prs: {
+    active: number;
+    stalled: number;
+  };
+  issues: {
+    active: number;
+    stalled: number;
+  };
+}
+
 /**
  * Gets all open issues with their "turn" status (whose turn is it to respond).
  * Uses the issue_turns view to compute turn logic based on comment history.
@@ -439,6 +471,77 @@ export async function getIssueTurnsByRepo(
     ORDER BY it.issue_github_id`,
     [repoGithubId, stallInterval],
   );
+}
+
+/**
+ * Gets counts of active and stalled PRs and Issues across all repositories.
+ * Excludes bots and items where turn = 'author'.
+ *
+ * @param stallInterval - PostgreSQL interval string (e.g., '14 days') for determining if work is stalled
+ * @returns Counts of active and stalled PRs and Issues
+ */
+export async function getStalledWorkCounts(
+  stallInterval: string = "14 days",
+): Promise<StalledWorkCounts> {
+  const result = await query<{
+    type: "pr" | "issue";
+    active: number;
+    stalled: number;
+  }>(
+    `WITH pr_turns AS (
+      SELECT 
+        pr.github_id,
+        it.turn,
+        it.last_maintainer_action_at,
+        (it.turn = 'maintainer' AND it.last_maintainer_action_at < NOW() - $1::interval) as stalled
+      FROM pull_requests pr
+      LEFT JOIN issue_turns it ON pr.github_id = it.issue_github_id
+      WHERE pr.state = 'open'
+        AND LOWER(pr.author_login) NOT LIKE '%bot%'
+        AND (it.turn IS NULL OR it.turn != 'author')
+    ),
+    issue_turns AS (
+      SELECT 
+        i.github_id,
+        it.turn,
+        it.last_maintainer_action_at,
+        (it.turn = 'maintainer' AND it.last_maintainer_action_at < NOW() - $1::interval) as stalled
+      FROM issues i
+      LEFT JOIN issue_turns it ON i.github_id = it.issue_github_id
+      WHERE i.state = 'open'
+        AND LOWER(i.author_login) NOT LIKE '%bot%'
+        AND (it.turn IS NULL OR it.turn != 'author')
+    )
+    SELECT 
+      'pr' as type,
+      COUNT(*) FILTER (WHERE NOT stalled OR stalled IS NULL)::int as active,
+      COUNT(*) FILTER (WHERE stalled = true)::int as stalled
+    FROM pr_turns
+    UNION ALL
+    SELECT 
+      'issue' as type,
+      COUNT(*) FILTER (WHERE NOT stalled OR stalled IS NULL)::int as active,
+      COUNT(*) FILTER (WHERE stalled = true)::int as stalled
+    FROM issue_turns`,
+    [stallInterval],
+  );
+
+  const prs = result.find((r) => r.type === "pr") || { active: 0, stalled: 0 };
+  const issues = result.find((r) => r.type === "issue") || {
+    active: 0,
+    stalled: 0,
+  };
+
+  return {
+    prs: {
+      active: prs.active,
+      stalled: prs.stalled,
+    },
+    issues: {
+      active: issues.active,
+      stalled: issues.stalled,
+    },
+  };
 }
 
 /**
