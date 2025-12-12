@@ -17,6 +17,7 @@ jobs:
           - aspect-build
           - aspect-extensions
           - chainguard-dev
+          - bazelbuild
     env:
       DATABASE_URL: ${{ secrets.DATABASE_URL }}
       APP_ID: ${{ secrets.APP_ID }}

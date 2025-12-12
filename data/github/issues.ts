@@ -157,3 +157,65 @@ export async function* fetchUpdatedIssuesSince(
     page++;
   }
 }
+
+/**
+ * GitHub API response for an issue comment.
+ */
+export interface IssueComment {
+  id: number;
+  user: {
+    id: number;
+    login: string;
+    avatar_url: string;
+    type: "User" | "Bot";
+  };
+  body: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Fetches comments for a specific issue from GitHub API.
+ * Handles pagination automatically.
+ *
+ * @param repo - Repository object with owner and name
+ * @param issueNumber - Issue number
+ * @param api - GitHub API client instance
+ * @returns Array of comments
+ */
+export async function fetchIssueComments(
+  repo: Repo,
+  issueNumber: number,
+  api: GitHubAPI,
+): Promise<IssueComment[]> {
+  const allComments: IssueComment[] = [];
+  let page = 1;
+  const perPage = 100;
+
+  while (true) {
+    const comments = await api.request<IssueComment[]>({
+      method: "GET",
+      url: "/repos/{owner}/{repo}/issues/{issue_number}/comments",
+      owner: repo.owner.login,
+      repo: repo.name,
+      issue_number: issueNumber,
+      page,
+      per_page: perPage,
+    });
+
+    if (comments.length === 0) {
+      break;
+    }
+
+    allComments.push(...comments);
+
+    // If we got fewer than perPage results, we're on the last page
+    if (comments.length < perPage) {
+      break;
+    }
+
+    page++;
+  }
+
+  return allComments;
+}

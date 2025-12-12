@@ -14,5 +14,9 @@
   "chainguard-dev": {
     "include": ["rules_apko"],
     "exclude": []
+  },
+  "bazelbuild": {
+    "include": ["rules_rust"],
+    "exclude": []
   }
 }

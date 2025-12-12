@@ -35,7 +35,8 @@
     "run:syncIssues": "tsx data/sync/syncAllIssues.ts",
     "run:syncPullRequests": "tsx data/sync/syncAllPullRequests.ts",
     "run:syncIncremental": "tsx data/sync/syncIncremental.ts",
-    "run:syncIssueReactions": "tsx data/sync/syncIssueReactions.ts"
+    "run:syncIssueReactions": "tsx data/sync/syncIssueReactions.ts",
+    "run:syncIssueComments": "tsx data/sync/syncIssueComments.ts"
   },
   "type": "module",
   "dependencies": {
