@@ -125,8 +125,10 @@ function filterReposByConfig(repos: Repo[], config: OrgSyncConfig): Repo[] {
     included = repos;
   } else {
     // Filter to only repos matching include patterns (supports glob patterns)
+    // TypeScript: config.include is string[] here (not "*")
+    const includePatterns: string[] = config.include;
     included = repos.filter((repo) => {
-      return repoMatchesPatterns(repo, config.include);
+      return repoMatchesPatterns(repo, includePatterns);
     });
   }
 
