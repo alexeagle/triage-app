@@ -69,6 +69,14 @@ export interface RepoStatsRow {
   open_prs_count: number;
 }
 
+export interface RepoWithPRCount {
+  github_id: number;
+  full_name: string;
+  name: string;
+  open_prs_count: number;
+  open_issues_count: number;
+}
+
 /**
  * Gets all repositories ordered by name.
  *
@@ -169,6 +177,67 @@ export async function getReposByOrg(org: string): Promise<RepoRow[]> {
      ORDER BY name ASC`,
     [`${org}/%`],
   );
+}
+
+/**
+ * Gets top repositories by open PR count.
+ *
+ * @param limit - Maximum number of repositories to return (default: 20)
+ * @returns Array of repositories with open PR counts, sorted by count descending
+ */
+export async function getTopReposByOpenPRs(
+  limit: number = 20,
+): Promise<RepoWithPRCount[]> {
+  return query<RepoWithPRCount>(
+    `SELECT 
+       r.github_id,
+       r.full_name,
+       r.name,
+       COUNT(DISTINCT CASE WHEN pr.state = 'open' AND LOWER(pr.author_login) NOT LIKE '%bot%' THEN pr.id END)::int as open_prs_count,
+       COUNT(DISTINCT CASE WHEN i.state = 'open' AND LOWER(i.author_login) NOT LIKE '%bot%' THEN i.id END)::int as open_issues_count
+     FROM repos r
+     LEFT JOIN pull_requests pr ON r.github_id = pr.repo_github_id
+     LEFT JOIN issues i ON r.github_id = i.repo_github_id
+     GROUP BY r.github_id, r.full_name, r.name
+     HAVING COUNT(DISTINCT CASE WHEN pr.state = 'open' AND LOWER(pr.author_login) NOT LIKE '%bot%' THEN pr.id END) > 0
+        OR COUNT(DISTINCT CASE WHEN i.state = 'open' AND LOWER(i.author_login) NOT LIKE '%bot%' THEN i.id END) > 0
+     ORDER BY (
+       COUNT(DISTINCT CASE WHEN pr.state = 'open' AND LOWER(pr.author_login) NOT LIKE '%bot%' THEN pr.id END) +
+       COUNT(DISTINCT CASE WHEN i.state = 'open' AND LOWER(i.author_login) NOT LIKE '%bot%' THEN i.id END)
+     ) DESC
+     LIMIT $1`,
+    [limit],
+  );
+}
+
+/**
+ * Gets total count of open PRs across all repositories (human authors only, excludes bots).
+ *
+ * @returns Total number of open PRs by human authors
+ */
+export async function getTotalOpenPRs(): Promise<number> {
+  const result = await query<{ count: number }>(
+    `SELECT COUNT(*)::int as count
+     FROM pull_requests
+     WHERE state = 'open'
+       AND LOWER(author_login) NOT LIKE '%bot%'`,
+  );
+  return result[0]?.count ?? 0;
+}
+
+/**
+ * Gets total count of open issues across all repositories (human authors only, excludes bots).
+ *
+ * @returns Total number of open issues by human authors
+ */
+export async function getTotalOpenIssues(): Promise<number> {
+  const result = await query<{ count: number }>(
+    `SELECT COUNT(*)::int as count
+     FROM issues
+     WHERE state = 'open'
+       AND LOWER(author_login) NOT LIKE '%bot%'`,
+  );
+  return result[0]?.count ?? 0;
 }
 
 export const PAGE_SIZE = 20;

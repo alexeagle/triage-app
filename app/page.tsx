@@ -1,8 +1,16 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getCurrentUser } from "../lib/auth";
-import { getOrgs, getNonBotPullRequests, PAGE_SIZE } from "../lib/queries";
+import {
+  getOrgs,
+  getNonBotPullRequests,
+  getTopReposByOpenPRs,
+  getTotalOpenPRs,
+  getTotalOpenIssues,
+  PAGE_SIZE,
+} from "../lib/queries";
 import PullRequestsTable from "./components/PullRequestsTable";
+import PRCountBarChart from "./components/PRCountBarChart";
 
 export default async function HomePage() {
   const user = await getCurrentUser();
@@ -21,10 +29,26 @@ export default async function HomePage() {
     );
   }
 
-  const [orgs, nonBotPRs] = await Promise.all([
-    getOrgs(),
-    getNonBotPullRequests(),
-  ]);
+  const [orgs, nonBotPRs, topReposByPRs, totalOpenPRs, totalOpenIssues] =
+    await Promise.all([
+      getOrgs(),
+      getNonBotPullRequests(),
+      getTopReposByOpenPRs(20),
+      getTotalOpenPRs(),
+      getTotalOpenIssues(),
+    ]);
+
+  // Calculate "other" counts (PRs and issues in repos outside top 20)
+  const top20PRCount = topReposByPRs.reduce(
+    (sum, repo) => sum + repo.open_prs_count,
+    0,
+  );
+  const top20IssueCount = topReposByPRs.reduce(
+    (sum, repo) => sum + repo.open_issues_count,
+    0,
+  );
+  const otherPRCount = totalOpenPRs - top20PRCount;
+  const otherIssueCount = totalOpenIssues - top20IssueCount;
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-full">
@@ -44,6 +68,28 @@ export default async function HomePage() {
           </li>
         ))}
       </ul>
+
+      <h2 className="text-2xl font-semibold mb-4">
+        Open Human-authored PRs and Issues by repo (Top 20)
+      </h2>
+      <div className="mb-4 text-sm text-gray-600">
+        <span className="inline-flex items-center gap-2 mr-4">
+          <span className="inline-block w-4 h-4 bg-blue-500 rounded"></span>
+          PRs
+        </span>
+        <span className="inline-flex items-center gap-2">
+          <span className="inline-block w-4 h-4 bg-orange-500 rounded"></span>
+          Issues
+        </span>
+      </div>
+      <div className="mb-12">
+        <PRCountBarChart
+          repos={topReposByPRs}
+          otherPRCount={otherPRCount}
+          otherIssueCount={otherIssueCount}
+          showOther={otherPRCount > 0 || otherIssueCount > 0}
+        />
+      </div>
 
       <section>
         <h2 className="text-2xl font-semibold mb-4">
