@@ -120,6 +120,19 @@ export async function detectMaintainersFromBcrMetadata(
         continue;
       }
 
+      // Check if user is a bot - skip if so
+      const { query } = await import("../data/db/index.js");
+      const userResult = await query<{ type: string | null; login: string }>(
+        `SELECT type, login FROM github_users WHERE github_id = $1`,
+        [githubUserId],
+      );
+      if (userResult.rows.length > 0) {
+        const user = userResult.rows[0];
+        if (user.type === "Bot" || user.login.toLowerCase().includes("bot")) {
+          continue;
+        }
+      }
+
       await upsertMaintainer(repo.id, githubUserId, "bcr-metadata", 100);
       detected.push(githubUserId);
     } catch (error) {
@@ -236,6 +249,19 @@ export async function detectMaintainersFromCodeowners(
         continue;
       }
 
+      // Check if user is a bot - skip if so
+      const { query } = await import("../data/db/index.js");
+      const userResult = await query<{ type: string | null; login: string }>(
+        `SELECT type, login FROM github_users WHERE github_id = $1`,
+        [githubUserId],
+      );
+      if (userResult.rows.length > 0) {
+        const user = userResult.rows[0];
+        if (user.type === "Bot" || user.login.toLowerCase().includes("bot")) {
+          continue;
+        }
+      }
+
       await upsertMaintainer(repo.id, githubUserId, "codeowners", 90);
 
       // Optionally mark in github_users table (for syncRepoMaintainers)
@@ -330,6 +356,19 @@ export async function detectMaintainersFromBcrMetadataTemplate(
       if (githubUserId === null) {
         // User not found in database - skip silently
         continue;
+      }
+
+      // Check if user is a bot - skip if so
+      const { query } = await import("../data/db/index.js");
+      const userResult = await query<{ type: string | null; login: string }>(
+        `SELECT type, login FROM github_users WHERE github_id = $1`,
+        [githubUserId],
+      );
+      if (userResult.rows.length > 0) {
+        const user = userResult.rows[0];
+        if (user.type === "Bot" || user.login.toLowerCase().includes("bot")) {
+          continue;
+        }
       }
 
       await upsertMaintainer(repo.id, githubUserId, "bcr-metadata", 100);

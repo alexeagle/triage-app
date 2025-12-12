@@ -11,6 +11,7 @@ import { query } from "./index.js";
  * Inserts if the relationship doesn't exist, updates if it does.
  * When a maintainer is detected from multiple sources, combines sources and uses the highest confidence.
  * Updates last_confirmed_at timestamp on existing relationships.
+ * Excludes bot users from being added as maintainers.
  *
  * @param repoGithubId - GitHub ID of the repository
  * @param githubUserId - GitHub ID of the user
@@ -23,6 +24,18 @@ export async function upsertMaintainer(
   source: string,
   confidence: number = 100,
 ): Promise<void> {
+  // Check if user is a bot - skip if so
+  const userCheck = await query<{ type: string | null; login: string }>(
+    `SELECT type, login FROM github_users WHERE github_id = $1`,
+    [githubUserId],
+  );
+  if (userCheck.rows.length > 0) {
+    const user = userCheck.rows[0];
+    if (user.type === "Bot" || user.login.toLowerCase().includes("bot")) {
+      return; // Silently skip bots
+    }
+  }
+
   await query(
     `INSERT INTO repo_maintainers (
       repo_github_id, github_user_id, source, confidence,

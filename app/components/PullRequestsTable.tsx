@@ -35,6 +35,9 @@ export default function PullRequestsTable({
   const [timeFilter, setTimeFilter] = useState<
     "all" | "day" | "week" | "month" | "year"
   >(defaultTimeFilter);
+  const [turnFilter, setTurnFilter] = useState<"all" | "maintainer" | "author">(
+    "maintainer",
+  );
 
   const go = (p: number) => {
     router.push(`?page=${p}`);
@@ -91,6 +94,15 @@ export default function PullRequestsTable({
       }
 
       if (updatedAt < cutoffDate) {
+        return false;
+      }
+    }
+
+    // Apply turn filter
+    if (turnFilter !== "all") {
+      // If PR doesn't have turn info (null), treat as maintainer's turn
+      const prTurn = pr.turn ?? "maintainer";
+      if (prTurn !== turnFilter) {
         return false;
       }
     }
@@ -158,6 +170,20 @@ export default function PullRequestsTable({
               <option value="week">last 7 days</option>
               <option value="month">last 30 days</option>
               <option value="year">last 12 months</option>
+            </select>
+          </label>
+          <label className="flex items-center gap-1">
+            Turn:
+            <select
+              value={turnFilter}
+              onChange={(e) =>
+                setTurnFilter(e.target.value as "all" | "maintainer" | "author")
+              }
+              className="px-2 py-1 text-sm border rounded"
+            >
+              <option value="all">all</option>
+              <option value="maintainer">maintainer</option>
+              <option value="author">author</option>
             </select>
           </label>
         </div>

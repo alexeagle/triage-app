@@ -61,6 +61,7 @@ export interface PullRequestRow {
   closed_at: string | null;
   synced_at: string;
   repo_full_name?: string; // Optional, populated when joined with repos table
+  turn?: "maintainer" | "author" | null; // Optional, populated when joined with issue_turns
 }
 
 export interface RepoStatsRow {
@@ -128,12 +129,33 @@ export async function getRepoPullRequests(
   repoGithubId: number,
 ): Promise<PullRequestRow[]> {
   return query<PullRequestRow>(
-    `SELECT id, github_id, repo_github_id, number, title, body, state, draft,
-            author_login, assignees, labels, additions, deletions, changed_files,
-            merged, merged_at, merge_commit_sha, created_at, updated_at, closed_at, synced_at
-     FROM pull_requests
-     WHERE repo_github_id = $1
-     ORDER BY updated_at DESC`,
+    `SELECT 
+      pr.id, 
+      pr.github_id, 
+      pr.repo_github_id, 
+      pr.number, 
+      pr.title, 
+      pr.body, 
+      pr.state, 
+      pr.draft,
+      pr.author_login, 
+      pr.assignees, 
+      pr.labels, 
+      pr.additions, 
+      pr.deletions, 
+      pr.changed_files,
+      pr.merged, 
+      pr.merged_at, 
+      pr.merge_commit_sha, 
+      pr.created_at, 
+      pr.updated_at, 
+      pr.closed_at, 
+      pr.synced_at,
+      it.turn
+     FROM pull_requests pr
+     LEFT JOIN issue_turns it ON pr.github_id = it.issue_github_id
+     WHERE pr.repo_github_id = $1
+     ORDER BY pr.updated_at DESC`,
     [repoGithubId],
   );
 }
@@ -354,15 +376,21 @@ export interface IssueTurnRow {
   turn: "maintainer" | "author";
   last_comment_at: string | null;
   last_comment_author: string | null;
+  last_maintainer_action_at: string;
+  stalled?: boolean;
 }
 
 /**
  * Gets all open issues with their "turn" status (whose turn is it to respond).
  * Uses the issue_turns view to compute turn logic based on comment history.
+ * Includes stalled status based on stall_interval parameter.
  *
- * @returns Array of issue turn rows
+ * @param stallInterval - PostgreSQL interval string (e.g., '14 days') for determining if an issue is stalled
+ * @returns Array of issue turn rows with stalled field
  */
-export async function getIssueTurns(): Promise<IssueTurnRow[]> {
+export async function getIssueTurns(
+  stallInterval: string = "14 days",
+): Promise<IssueTurnRow[]> {
   return query<IssueTurnRow>(
     `SELECT 
       issue_github_id,
@@ -371,20 +399,27 @@ export async function getIssueTurns(): Promise<IssueTurnRow[]> {
       title,
       turn,
       last_comment_at,
-      last_comment_author
+      last_comment_author,
+      last_maintainer_action_at,
+      -- stalled = true when turn is 'maintainer' AND last_maintainer_action_at is older than stall_interval
+      (turn = 'maintainer' AND last_maintainer_action_at < NOW() - $1::interval) as stalled
     FROM issue_turns
     ORDER BY issue_github_id`,
+    [stallInterval],
   );
 }
 
 /**
  * Gets issue turns for a specific repository.
+ * Includes stalled status based on stall_interval parameter.
  *
  * @param repoGithubId - GitHub ID of the repository
- * @returns Array of issue turn rows for that repository
+ * @param stallInterval - PostgreSQL interval string (e.g., '14 days') for determining if an issue is stalled
+ * @returns Array of issue turn rows for that repository with stalled field
  */
 export async function getIssueTurnsByRepo(
   repoGithubId: number,
+  stallInterval: string = "14 days",
 ): Promise<IssueTurnRow[]> {
   return query<IssueTurnRow>(
     `SELECT 
@@ -394,12 +429,15 @@ export async function getIssueTurnsByRepo(
       it.title,
       it.turn,
       it.last_comment_at,
-      it.last_comment_author
+      it.last_comment_author,
+      it.last_maintainer_action_at,
+      -- stalled = true when turn is 'maintainer' AND last_maintainer_action_at is older than stall_interval
+      (it.turn = 'maintainer' AND it.last_maintainer_action_at < NOW() - $2::interval) as stalled
     FROM issue_turns it
     INNER JOIN issues i ON it.issue_github_id = i.github_id
     WHERE i.repo_github_id = $1
     ORDER BY it.issue_github_id`,
-    [repoGithubId],
+    [repoGithubId, stallInterval],
   );
 }
 
@@ -481,9 +519,11 @@ export async function getNonBotPullRequests(): Promise<PullRequestRow[]> {
       pr.updated_at,
       pr.closed_at,
       pr.synced_at,
-      r.full_name as repo_full_name
+      r.full_name as repo_full_name,
+      it.turn
     FROM pull_requests pr
     INNER JOIN repos r ON pr.repo_github_id = r.github_id
+    LEFT JOIN issue_turns it ON pr.github_id = it.issue_github_id
     WHERE LOWER(pr.author_login) NOT LIKE '%bot%'
     ORDER BY pr.updated_at DESC`,
   );

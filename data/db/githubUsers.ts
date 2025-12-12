@@ -48,6 +48,7 @@ export async function upsertGitHubUser(user: GitHubUserInput): Promise<void> {
  * Marks a GitHub user as a maintainer by appending the source to maintainer_sources
  * and setting is_maintainer to true.
  * Deduplicates the source string if it already exists in the array.
+ * Excludes bot users from being marked as maintainers.
  *
  * @param github_id - GitHub ID of the user
  * @param source - Source string to add (e.g., "github-app", "bcr-metadata")
@@ -65,7 +66,9 @@ export async function markMaintainer(
          ELSE maintainer_sources || jsonb_build_array($2::text)
        END,
        is_maintainer = true
-     WHERE github_id = $1`,
+     WHERE github_id = $1
+       AND (type IS NULL OR type != 'Bot')
+       AND LOWER(login) NOT LIKE '%bot%'`,
     [github_id, source],
   );
 }
