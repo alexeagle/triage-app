@@ -7,8 +7,8 @@ import Providers from "./components/Providers";
 const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "Triage App",
-  description: "GitHub issue and PR triage application",
+  title: "Bazel Triage App",
+  description: "Bazel issue and PR triage application",
 };
 
 export default function RootLayout({
