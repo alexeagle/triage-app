@@ -3,7 +3,7 @@ import { useState, useEffect, useTransition } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser } from "@fortawesome/free-solid-svg-icons";
+import { faUser, faCircleNotch } from "@fortawesome/free-solid-svg-icons";
 import { getStarredOnlyFilter, setStarredOnlyFilter } from "../../lib/filters";
 
 export default function Header() {
@@ -76,11 +76,20 @@ export default function Header() {
               starredOnly ? "bg-blue-600" : "bg-gray-300"
             }`}
           >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                starredOnly ? "translate-x-6" : "translate-x-1"
-              }`}
-            />
+            {isPending ? (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <FontAwesomeIcon
+                  icon={faCircleNotch}
+                  className="w-4 h-4 text-gray-900 animate-spin"
+                />
+              </div>
+            ) : (
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  starredOnly ? "translate-x-6" : "translate-x-1"
+                }`}
+              />
+            )}
           </button>
         </label>
         {avatarUrl ? (
