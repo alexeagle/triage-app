@@ -6,6 +6,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Link from "next/link";
 import { PullRequestRow } from "@/lib/queries";
 import TimeAgo from "./TimeAgo";
+import GitHubUser from "./GitHubUser";
 
 interface PullRequestsTableProps {
   pullRequests: PullRequestRow[];
@@ -26,7 +27,7 @@ export default function PullRequestsTable({
     "all",
   );
   const [authorFilter, setAuthorFilter] = useState<
-    "all" | "not me" | "only me"
+    "all" | "not me" | "only me" | "is maintainer"
   >("all");
   const [timeFilter, setTimeFilter] = useState<
     "all" | "day" | "week" | "month" | "year"
@@ -61,6 +62,11 @@ export default function PullRequestsTable({
     }
     if (authorFilter === "not me") {
       if (pr.author_login === userLogin) {
+        return false;
+      }
+    }
+    if (authorFilter === "is maintainer") {
+      if (!pr.author_is_maintainer) {
         return false;
       }
     }
@@ -140,13 +146,20 @@ export default function PullRequestsTable({
             <select
               value={authorFilter}
               onChange={(e) =>
-                setAuthorFilter(e.target.value as "all" | "not me" | "only me")
+                setAuthorFilter(
+                  e.target.value as
+                    | "all"
+                    | "not me"
+                    | "only me"
+                    | "is maintainer",
+                )
               }
               className="px-2 py-1 text-sm border rounded"
             >
               <option value="all">all</option>
               <option value="not me">not me</option>
               <option value="only me">only me</option>
+              <option value="is maintainer">is maintainer</option>
             </select>
           </label>
           <label className="flex items-center gap-1">
@@ -272,7 +285,12 @@ export default function PullRequestsTable({
                   )}
                 </td>
                 <td className="px-4 py-2 text-sm text-gray-600">
-                  {pr.author_login}
+                  <GitHubUser
+                    login={pr.author_login}
+                    avatarUrl={pr.author_avatar_url}
+                    size="md"
+                    isMaintainer={pr.author_is_maintainer ?? false}
+                  />
                 </td>
                 <td className="px-4 py-2 text-sm">
                   <div className="flex flex-wrap gap-1">

@@ -36,6 +36,7 @@ export interface IssueRow {
   synced_at: string;
   repo_full_name?: string; // Optional, populated when joined with repos table
   author_avatar_url?: string | null; // Optional, populated when joined with github_users table
+  author_is_maintainer?: boolean | null; // Optional, populated when joined with github_users table
 }
 
 export interface PullRequestRow {
@@ -62,6 +63,8 @@ export interface PullRequestRow {
   synced_at: string;
   repo_full_name?: string; // Optional, populated when joined with repos table
   turn?: "maintainer" | "author" | null; // Optional, populated when joined with issue_turns
+  author_avatar_url?: string | null; // Optional, populated when joined with github_users table
+  author_is_maintainer?: boolean | null; // Optional, populated when joined with github_users table
 }
 
 export interface RepoStatsRow {
@@ -112,7 +115,8 @@ export async function getRepoIssues(repoGithubId: number): Promise<IssueRow[]> {
   return query<IssueRow>(
     `SELECT i.id, i.github_id, i.repo_github_id, i.number, i.title, i.body, i.state,
             i.created_at, i.updated_at, i.closed_at, i.labels, i.assignees, i.author_login, i.synced_at,
-            gu.avatar_url as author_avatar_url
+            gu.avatar_url as author_avatar_url,
+            gu.is_maintainer as author_is_maintainer
      FROM issues i
      LEFT JOIN github_users gu ON i.author_login = gu.login
      WHERE i.repo_github_id = $1 AND i.state = 'open'
@@ -153,9 +157,12 @@ export async function getRepoPullRequests(
       pr.updated_at, 
       pr.closed_at, 
       pr.synced_at,
-      it.turn
+      it.turn,
+      gu.avatar_url as author_avatar_url,
+      gu.is_maintainer as author_is_maintainer
      FROM pull_requests pr
      LEFT JOIN issue_turns it ON pr.github_id = it.issue_github_id
+     LEFT JOIN github_users gu ON pr.author_login = gu.login
      WHERE pr.repo_github_id = $1
      ORDER BY pr.updated_at DESC`,
     [repoGithubId],
@@ -759,10 +766,13 @@ export async function getNonBotPullRequests(
       pr.closed_at,
       pr.synced_at,
       r.full_name as repo_full_name,
-      it.turn
+      it.turn,
+      gu.avatar_url as author_avatar_url,
+      gu.is_maintainer as author_is_maintainer
     FROM pull_requests pr
     INNER JOIN repos r ON pr.repo_github_id = r.github_id
-    LEFT JOIN issue_turns it ON pr.github_id = it.issue_github_id`;
+    LEFT JOIN issue_turns it ON pr.github_id = it.issue_github_id
+    LEFT JOIN github_users gu ON pr.author_login = gu.login`;
 
   if (userGithubId) {
     sql += ` INNER JOIN repo_stars rs ON r.github_id = rs.repo_github_id

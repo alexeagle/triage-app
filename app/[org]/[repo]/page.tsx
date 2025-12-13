@@ -12,6 +12,7 @@ import {
 } from "../../../lib/queries";
 import IssuesTable from "../../components/IssuesTable";
 import PullRequestsTable from "../../components/PullRequestsTable";
+import GitHubUser from "../../components/GitHubUser";
 
 interface RepoPageProps {
   params: {
@@ -87,20 +88,13 @@ export default async function RepoPage({ params }: RepoPageProps) {
                     key={`${maintainer.github_user_id}-${maintainer.source}`}
                     className="flex items-center gap-2"
                   >
-                    {maintainer.avatar_url && (
-                      <img
-                        src={maintainer.avatar_url}
-                        alt={maintainer.login}
-                        className="w-5 h-5 rounded-full"
-                      />
-                    )}
-                    <Link
-                      href={`https://github.com/${maintainer.login}`}
-                      className="text-blue-600 hover:underline"
-                      target="_blank"
-                    >
-                      {maintainer.login}
-                    </Link>
+                    <GitHubUser
+                      login={maintainer.login}
+                      avatarUrl={maintainer.avatar_url}
+                      size="sm"
+                      showLink={true}
+                      isMaintainer={true}
+                    />
                     <span className="text-gray-500 text-xs">
                       ({maintainer.source}, {maintainer.confidence}% confidence)
                     </span>

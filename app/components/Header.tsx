@@ -3,8 +3,9 @@ import { useState, useEffect, useTransition } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
-import { faUser, faCircleNotch } from "@fortawesome/free-solid-svg-icons";
+import { faCircleNotch } from "@fortawesome/free-solid-svg-icons";
 import { getStarredOnlyFilter, setStarredOnlyFilter } from "../../lib/filters";
+import GitHubUser from "./GitHubUser";
 
 export default function Header() {
   const { data: session } = useSession();
@@ -93,12 +94,12 @@ export default function Header() {
             )}
           </button>
         </label>
-        {avatarUrl ? (
-          <img src={avatarUrl} alt={login} className="w-8 h-8 rounded-full" />
-        ) : (
-          <FontAwesomeIcon icon={faUser} className="w-8 h-8" />
-        )}
-        <span>{login}</span>
+        <GitHubUser
+          login={login}
+          avatarUrl={avatarUrl}
+          size="lg"
+          isMaintainer={false}
+        />
       </div>
     </header>
   );

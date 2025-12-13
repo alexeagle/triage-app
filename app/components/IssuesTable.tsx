@@ -6,6 +6,7 @@ import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import Link from "next/link";
 import { IssueRow } from "@/lib/queries";
 import TimeAgo from "./TimeAgo";
+import GitHubUser from "./GitHubUser";
 
 interface IssuesTableProps {
   issues: IssueRow[];
@@ -18,7 +19,7 @@ export default function IssuesTable({ issues }: IssuesTableProps) {
     "all" | "feature request" | "bug" | "other"
   >("all");
   const [reporterFilter, setReporterFilter] = useState<
-    "all" | "not me" | "only me"
+    "all" | "not me" | "only me" | "is maintainer"
   >("all");
   const [timeFilter, setTimeFilter] = useState<
     "all" | "day" | "week" | "month" | "year"
@@ -72,6 +73,11 @@ export default function IssuesTable({ issues }: IssuesTableProps) {
     }
     if (reporterFilter === "not me") {
       if (issue.author_login === userLogin) {
+        return false;
+      }
+    }
+    if (reporterFilter === "is maintainer") {
+      if (!issue.author_is_maintainer) {
         return false;
       }
     }
@@ -136,7 +142,11 @@ export default function IssuesTable({ issues }: IssuesTableProps) {
               value={reporterFilter}
               onChange={(e) =>
                 setReporterFilter(
-                  e.target.value as "all" | "not me" | "only me",
+                  e.target.value as
+                    | "all"
+                    | "not me"
+                    | "only me"
+                    | "is maintainer",
                 )
               }
               className="px-2 py-1 text-sm border rounded"
@@ -144,6 +154,7 @@ export default function IssuesTable({ issues }: IssuesTableProps) {
               <option value="all">all</option>
               <option value="not me">not me</option>
               <option value="only me">only me</option>
+              <option value="is maintainer">is maintainer</option>
             </select>
           </label>
           <label className="flex items-center gap-1">
@@ -212,16 +223,12 @@ export default function IssuesTable({ issues }: IssuesTableProps) {
                   {i.repo_full_name || "N/A"}
                 </td>
                 <td className="px-4 py-2 text-sm text-gray-600">
-                  <div className="flex items-center gap-2">
-                    {i.author_avatar_url && (
-                      <img
-                        src={i.author_avatar_url}
-                        alt={i.author_login}
-                        className="w-6 h-6 rounded-full"
-                      />
-                    )}
-                    <span>{i.author_login}</span>
-                  </div>
+                  <GitHubUser
+                    login={i.author_login}
+                    avatarUrl={i.author_avatar_url}
+                    size="md"
+                    isMaintainer={i.author_is_maintainer ?? false}
+                  />
                 </td>
                 <td className="px-4 py-2 text-sm">
                   <div className="flex flex-wrap gap-1">
