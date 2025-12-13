@@ -14,6 +14,7 @@ interface PullRequestsTableProps {
   page: number;
   totalPages: number;
   defaultTimeFilter?: "all" | "day" | "week" | "month" | "year";
+  maintainerRepoIds?: number[]; // Array of repo github_ids where user is a maintainer
 }
 
 export default function PullRequestsTable({
@@ -22,6 +23,7 @@ export default function PullRequestsTable({
   page,
   totalPages,
   defaultTimeFilter = "all",
+  maintainerRepoIds = [],
 }: PullRequestsTableProps) {
   const router = useRouter();
   const { data: session } = useSession();
@@ -37,6 +39,9 @@ export default function PullRequestsTable({
   >(defaultTimeFilter);
   const [turnFilter, setTurnFilter] = useState<"all" | "maintainer" | "author">(
     "maintainer",
+  );
+  const [repoFilter, setRepoFilter] = useState<"all" | "I'm a maintainer">(
+    "I'm a maintainer",
   );
 
   const go = (p: number) => {
@@ -103,6 +108,13 @@ export default function PullRequestsTable({
       // If PR doesn't have turn info (null), treat as maintainer's turn
       const prTurn = pr.turn ?? "maintainer";
       if (prTurn !== turnFilter) {
+        return false;
+      }
+    }
+
+    // Apply repo filter
+    if (repoFilter === "I'm a maintainer") {
+      if (!maintainerRepoIds.includes(pr.repo_github_id)) {
         return false;
       }
     }
@@ -186,6 +198,21 @@ export default function PullRequestsTable({
               <option value="author">author</option>
             </select>
           </label>
+          {maintainerRepoIds.length > 0 && (
+            <label className="flex items-center gap-1">
+              Repo:
+              <select
+                value={repoFilter}
+                onChange={(e) =>
+                  setRepoFilter(e.target.value as "all" | "I'm a maintainer")
+                }
+                className="px-2 py-1 text-sm border rounded"
+              >
+                <option value="all">all</option>
+                <option value="I'm a maintainer">I'm a maintainer</option>
+              </select>
+            </label>
+          )}
         </div>
       </div>
       {/* Table */}

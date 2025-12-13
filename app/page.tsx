@@ -288,6 +288,7 @@ export default async function HomePage() {
               page={1}
               totalPages={Math.ceil(nonBotPRs.length / PAGE_SIZE)}
               defaultTimeFilter="day"
+              maintainerRepoIds={maintainerRepos.map((r) => r.github_id)}
             />
           )}
         </section>
