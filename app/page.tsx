@@ -12,10 +12,12 @@ import {
   getRepoCountsByOrg,
   getStalledWorkCounts,
   getReposByMaintainer,
+  getNextWorkItem,
 } from "../lib/queries";
 import PullRequestsTable from "./components/PullRequestsTable";
 import PRCountBarChartWrapper from "./components/PRCountBarChartWrapper";
 import InfoTooltip from "./components/InfoTooltip";
+import NextWorkItemCard from "./components/NextWorkItemCard";
 import { faBuilding, faDatabase } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
@@ -49,6 +51,7 @@ export default async function HomePage() {
   const stallInterval = "14 days";
 
   const [
+    nextWorkItem,
     orgs,
     repoCountsByOrg,
     nonBotPRs,
@@ -59,6 +62,7 @@ export default async function HomePage() {
     stalledCounts,
     maintainerRepos,
   ] = await Promise.all([
+    getNextWorkItem(user.github_id, stallInterval),
     getOrgs(userGithubId),
     getRepoCountsByOrg(userGithubId),
     getNonBotPullRequests(userGithubId),
@@ -100,7 +104,8 @@ export default async function HomePage() {
 
   return (
     <>
-      <nav className="bg-gray-50 border-b border-gray-200 py-2 m-0">
+      {/* Nav - hidden on mobile */}
+      <nav className="hidden md:block bg-gray-50 border-b border-gray-200 py-2 m-0">
         <div className="container mx-auto px-4 max-w-full">
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2 text-gray-600">
@@ -130,163 +135,185 @@ export default async function HomePage() {
         </div>
       </nav>
       <div className="container mx-auto px-4 py-8 max-w-full">
-        {maintainerRepos.length > 0 && (
-          <div className="mb-6">
-            <h2 className="text-xl font-semibold mb-2">
-              {maintainerRepos.length} Repositories You Maintain (thank you!)
-            </h2>
-            <ul className="space-y-1">
-              {(() => {
-                // Calculate max total for scaling
-                const maxTotal = Math.max(
-                  ...maintainerRepos.map(
-                    (r) => r.open_prs_count + r.open_issues_count,
-                  ),
-                  1, // Avoid division by zero
-                );
-
-                return maintainerRepos.map((repo) => {
-                  const [org, repoName] = repo.full_name.split("/");
-                  const repoTotal =
-                    repo.open_prs_count + repo.open_issues_count;
-                  const prWidthPercent =
-                    maxTotal > 0 ? (repo.open_prs_count / maxTotal) * 100 : 0;
-                  const issueWidthPercent =
-                    maxTotal > 0
-                      ? (repo.open_issues_count / maxTotal) * 100
-                      : 0;
-
-                  return (
-                    <li
-                      key={repo.github_id}
-                      className="relative py-1 px-3 rounded border border-gray-200 hover:border-gray-300 transition-colors"
-                    >
-                      {/* Bar chart background */}
-                      <div className="absolute inset-0 flex gap-0.5 rounded overflow-hidden opacity-20">
-                        {repo.open_prs_count > 0 && (
-                          <div
-                            className="bg-blue-500"
-                            style={{ width: `${prWidthPercent}%` }}
-                          />
-                        )}
-                        {repo.open_issues_count > 0 && (
-                          <div
-                            className="bg-orange-500"
-                            style={{ width: `${issueWidthPercent}%` }}
-                          />
-                        )}
-                      </div>
-                      {/* Content on top */}
-                      <div className="relative z-10 flex items-center gap-3">
-                        <Link
-                          href={`/${org}/${repoName}`}
-                          className="text-blue-600 hover:text-blue-800 hover:underline font-medium flex-shrink-0"
-                        >
-                          {repo.full_name}
-                        </Link>
-                        <span className="text-gray-500 text-sm">
-                          {repo.open_issues_count} open issues,{" "}
-                          {repo.open_prs_count} open PRs
-                        </span>
-                      </div>
-                    </li>
-                  );
-                });
-              })()}
-            </ul>
-          </div>
-        )}
-        <hr />
-        <h2 className="text-2xl font-semibold mb-8 mt-8">
-          Pull Requests (Non-Bot Authors)
-        </h2>
-        {nonBotPRs.length === 0 ? (
-          <p className="text-gray-600 text-sm">No pull requests found.</p>
-        ) : (
-          <PullRequestsTable
-            pullRequests={nonBotPRs}
-            repoFullName=""
-            defaultTimeFilter="day"
-            maintainerRepoIds={maintainerRepos.map((r) => r.github_id)}
-          />
-        )}
-        <hr />
-
-        <h2 className="text-2xl font-semibold mb-8 flex items-center mt-8">
-          Human-authored PRs/Issues waiting on Maintainer (Top 20 repos)
-          <InfoTooltip
-            content={
-              <div className="space-y-2">
-                <div>
-                  <strong className="text-white">Maintainers:</strong>
-                  <p className="text-gray-300 text-xs mt-1">
-                    Identified from three sources: (1) GitHub Collaborators API
-                    (admin/maintain/write permissions), (2) CODEOWNERS files,
-                    and (3) .bcr/metadata.template.json files. Users are marked
-                    as maintainers when detected from any of these sources.
-                  </p>
-                </div>
-                <div>
-                  <strong className="text-white">Whose Turn:</strong>
-                  <p className="text-gray-300 text-xs mt-1">
-                    Determined by comment history: If no maintainer has
-                    commented, it's the maintainer's turn. If the last comment
-                    was by a maintainer, it's the author's turn. This chart only
-                    shows items where it's the maintainer's turn to respond.
-                  </p>
-                </div>
-                <div>
-                  <strong className="text-white">Human-authored:</strong>
-                  <p className="text-gray-300 text-xs mt-1">
-                    Excludes any PRs or issues where the author's login contains
-                    "bot" (case-insensitive). This filters out automated
-                    accounts and GitHub Actions bots.
-                  </p>
-                </div>
-                <div>
-                  <strong className="text-white">Stalled:</strong>
-                  <p className="text-gray-300 text-xs mt-1">
-                    An item is marked as "stalled" when two conditions are met:
-                    (1) It's the maintainer's turn to respond, and (2) The last
-                    maintainer action (or the item's creation date if no
-                    maintainer has commented) occurred more than 14 days ago.
-                    This highlights work that has been waiting on maintainers
-                    for an extended period and may need attention.
-                  </p>
-                </div>
-              </div>
-            }
-          />
-        </h2>
-        <div className="mb-4 text-sm text-gray-600">
-          <span className="inline-flex items-center gap-2 mr-4">
-            <span className="inline-block w-4 h-4 bg-blue-500 rounded"></span>
-            PRs (active)
-          </span>
-          <span className="inline-flex items-center gap-2 mr-4">
-            <span className="inline-block w-4 h-4 bg-blue-700 rounded"></span>
-            PRs (stalled)
-          </span>
-          <span className="inline-flex items-center gap-2 mr-4">
-            <span className="inline-block w-4 h-4 bg-orange-500 rounded"></span>
-            Issues (active)
-          </span>
-          <span className="inline-flex items-center gap-2">
-            <span className="inline-block w-4 h-4 bg-orange-700 rounded"></span>
-            Issues (stalled)
-          </span>
+        {/* What should I work on next? - Always visible */}
+        <div className="mb-8">
+          <h2 className="text-2xl font-semibold mb-4">
+            What should I work on next?
+          </h2>
+          {nextWorkItem ? (
+            <NextWorkItemCard item={nextWorkItem} />
+          ) : (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
+              <p className="text-gray-600">Nothing urgent right now.</p>
+            </div>
+          )}
         </div>
-        <div className="mb-12">
-          <PRCountBarChartWrapper
-            repos={topReposByPRs}
-            otherPRCount={otherPRCount}
-            otherIssueCount={otherIssueCount}
-            otherStalledPRCount={otherStalledPRCount}
-            otherStalledIssueCount={otherStalledIssueCount}
-            otherRepoCount={Math.max(0, totalRepoCount - topReposByPRs.length)}
-            showOther={otherPRCount > 0 || otherIssueCount > 0}
-            stallInterval={stallInterval}
-          />
+
+        {/* Desktop-only content - hidden on mobile */}
+        <div className="hidden md:block">
+          {maintainerRepos.length > 0 && (
+            <div className="mb-6">
+              <h2 className="text-xl font-semibold mb-2">
+                {maintainerRepos.length} Repositories You Maintain (thank you!)
+              </h2>
+              <ul className="space-y-1">
+                {(() => {
+                  // Calculate max total for scaling
+                  const maxTotal = Math.max(
+                    ...maintainerRepos.map(
+                      (r) => r.open_prs_count + r.open_issues_count,
+                    ),
+                    1, // Avoid division by zero
+                  );
+
+                  return maintainerRepos.map((repo) => {
+                    const [org, repoName] = repo.full_name.split("/");
+                    const repoTotal =
+                      repo.open_prs_count + repo.open_issues_count;
+                    const prWidthPercent =
+                      maxTotal > 0 ? (repo.open_prs_count / maxTotal) * 100 : 0;
+                    const issueWidthPercent =
+                      maxTotal > 0
+                        ? (repo.open_issues_count / maxTotal) * 100
+                        : 0;
+
+                    return (
+                      <li
+                        key={repo.github_id}
+                        className="relative py-1 px-3 rounded border border-gray-200 hover:border-gray-300 transition-colors"
+                      >
+                        {/* Bar chart background */}
+                        <div className="absolute inset-0 flex gap-0.5 rounded overflow-hidden opacity-20">
+                          {repo.open_prs_count > 0 && (
+                            <div
+                              className="bg-blue-500"
+                              style={{ width: `${prWidthPercent}%` }}
+                            />
+                          )}
+                          {repo.open_issues_count > 0 && (
+                            <div
+                              className="bg-orange-500"
+                              style={{ width: `${issueWidthPercent}%` }}
+                            />
+                          )}
+                        </div>
+                        {/* Content on top */}
+                        <div className="relative z-10 flex items-center gap-3">
+                          <Link
+                            href={`/${org}/${repoName}`}
+                            className="text-blue-600 hover:text-blue-800 hover:underline font-medium flex-shrink-0"
+                          >
+                            {repo.full_name}
+                          </Link>
+                          <span className="text-gray-500 text-sm">
+                            {repo.open_issues_count} open issues,{" "}
+                            {repo.open_prs_count} open PRs
+                          </span>
+                        </div>
+                      </li>
+                    );
+                  });
+                })()}
+              </ul>
+            </div>
+          )}
+          <hr />
+          <h2 className="text-2xl font-semibold mb-8 mt-8">
+            Pull Requests (Non-Bot Authors)
+          </h2>
+          {nonBotPRs.length === 0 ? (
+            <p className="text-gray-600 text-sm">No pull requests found.</p>
+          ) : (
+            <PullRequestsTable
+              pullRequests={nonBotPRs}
+              repoFullName=""
+              defaultTimeFilter="day"
+              maintainerRepoIds={maintainerRepos.map((r) => r.github_id)}
+            />
+          )}
+          <hr />
+
+          <h2 className="text-2xl font-semibold mb-8 flex items-center mt-8">
+            Human-authored PRs/Issues waiting on Maintainer (Top 20 repos)
+            <InfoTooltip
+              content={
+                <div className="space-y-2">
+                  <div>
+                    <strong className="text-white">Maintainers:</strong>
+                    <p className="text-gray-300 text-xs mt-1">
+                      Identified from three sources: (1) GitHub Collaborators
+                      API (admin/maintain/write permissions), (2) CODEOWNERS
+                      files, and (3) .bcr/metadata.template.json files. Users
+                      are marked as maintainers when detected from any of these
+                      sources.
+                    </p>
+                  </div>
+                  <div>
+                    <strong className="text-white">Whose Turn:</strong>
+                    <p className="text-gray-300 text-xs mt-1">
+                      Determined by comment history: If no maintainer has
+                      commented, it's the maintainer's turn. If the last comment
+                      was by a maintainer, it's the author's turn. This chart
+                      only shows items where it's the maintainer's turn to
+                      respond.
+                    </p>
+                  </div>
+                  <div>
+                    <strong className="text-white">Human-authored:</strong>
+                    <p className="text-gray-300 text-xs mt-1">
+                      Excludes any PRs or issues where the author's login
+                      contains "bot" (case-insensitive). This filters out
+                      automated accounts and GitHub Actions bots.
+                    </p>
+                  </div>
+                  <div>
+                    <strong className="text-white">Stalled:</strong>
+                    <p className="text-gray-300 text-xs mt-1">
+                      An item is marked as "stalled" when two conditions are
+                      met: (1) It's the maintainer's turn to respond, and (2)
+                      The last maintainer action (or the item's creation date if
+                      no maintainer has commented) occurred more than 14 days
+                      ago. This highlights work that has been waiting on
+                      maintainers for an extended period and may need attention.
+                    </p>
+                  </div>
+                </div>
+              }
+            />
+          </h2>
+          <div className="mb-4 text-sm text-gray-600">
+            <span className="inline-flex items-center gap-2 mr-4">
+              <span className="inline-block w-4 h-4 bg-blue-500 rounded"></span>
+              PRs (active)
+            </span>
+            <span className="inline-flex items-center gap-2 mr-4">
+              <span className="inline-block w-4 h-4 bg-blue-700 rounded"></span>
+              PRs (stalled)
+            </span>
+            <span className="inline-flex items-center gap-2 mr-4">
+              <span className="inline-block w-4 h-4 bg-orange-500 rounded"></span>
+              Issues (active)
+            </span>
+            <span className="inline-flex items-center gap-2">
+              <span className="inline-block w-4 h-4 bg-orange-700 rounded"></span>
+              Issues (stalled)
+            </span>
+          </div>
+          <div className="mb-12">
+            <PRCountBarChartWrapper
+              repos={topReposByPRs}
+              otherPRCount={otherPRCount}
+              otherIssueCount={otherIssueCount}
+              otherStalledPRCount={otherStalledPRCount}
+              otherStalledIssueCount={otherStalledIssueCount}
+              otherRepoCount={Math.max(
+                0,
+                totalRepoCount - topReposByPRs.length,
+              )}
+              showOther={otherPRCount > 0 || otherIssueCount > 0}
+              stallInterval={stallInterval}
+            />
+          </div>
         </div>
       </div>
     </>

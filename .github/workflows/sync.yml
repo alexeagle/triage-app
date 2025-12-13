@@ -2,8 +2,8 @@ name: Incremental GitHub -> Postgres Sync
 
 on:
   schedule:
-    # Run every hour during my typical working hours M-F in UTC
-    - cron: '0 16-23 * * 1-5'
+    # Run every morning during my typical working hours M-F in UTC
+    - cron: '11 14 * * 1-5'
   workflow_dispatch: # Allow manual triggering
 
 jobs:
@@ -34,6 +34,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm run:syncIncremental
       - run: pnpm run:syncIssueReactions
+      - run: pnpm run:refreshUserItemInteractions
       - name: Notify on failure
         if: failure()
         uses: actions/github-script@v7
