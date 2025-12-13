@@ -164,69 +164,116 @@ export async function getRepoPullRequests(
 
 /**
  * Gets statistics for all repositories including open issues and PR counts.
+ * If userGithubId is provided, only returns stats for repos the user has starred.
  *
+ * @param userGithubId - Optional GitHub user ID to filter by starred repos
  * @returns Array of repository stats rows with repo_github_id, open_issues_count, and open_prs_count
  */
-export async function getRepoStats(): Promise<RepoStatsRow[]> {
-  return query<RepoStatsRow>(
-    `SELECT 
+export async function getRepoStats(
+  userGithubId?: number | null,
+): Promise<RepoStatsRow[]> {
+  let sql = `SELECT 
        r.github_id as repo_github_id,
        COUNT(DISTINCT CASE WHEN i.state = 'open' THEN i.id END)::int as open_issues_count,
        COUNT(DISTINCT CASE WHEN pr.state = 'open' THEN pr.id END)::int as open_prs_count
      FROM repos r
      LEFT JOIN issues i ON r.github_id = i.repo_github_id
-     LEFT JOIN pull_requests pr ON r.github_id = pr.repo_github_id
-     GROUP BY r.github_id`,
-  );
+     LEFT JOIN pull_requests pr ON r.github_id = pr.repo_github_id`;
+
+  if (userGithubId) {
+    sql += ` INNER JOIN repo_stars rs ON r.github_id = rs.repo_github_id
+             WHERE rs.user_github_id = $1`;
+  }
+
+  sql += ` GROUP BY r.github_id`;
+
+  return query<RepoStatsRow>(sql, userGithubId ? [userGithubId] : []);
 }
 
 /**
  * Gets all unique organizations from repositories.
  * Extracts the organization name from full_name (everything before the first "/").
+ * If userGithubId is provided, only returns orgs for repos the user has starred.
  *
+ * @param userGithubId - Optional GitHub user ID to filter by starred repos
  * @returns Array of organization names, sorted alphabetically
  */
-export async function getOrgs(): Promise<string[]> {
+export async function getOrgs(userGithubId?: number | null): Promise<string[]> {
+  let sql = `SELECT DISTINCT 
+       SPLIT_PART(r.full_name, '/', 1) as org
+     FROM repos r`;
+
+  if (userGithubId) {
+    sql += ` INNER JOIN repo_stars rs ON r.github_id = rs.repo_github_id
+             WHERE rs.user_github_id = $1`;
+  }
+
+  sql += ` ORDER BY org ASC`;
+
   const result = await query<{ org: string }>(
-    `SELECT DISTINCT 
-       SPLIT_PART(full_name, '/', 1) as org
-     FROM repos
-     ORDER BY org ASC`,
+    sql,
+    userGithubId ? [userGithubId] : [],
   );
   return result.map((row) => row.org);
 }
 
 /**
  * Gets repository counts per organization.
+ * If userGithubId is provided, only counts repos the user has starred.
  *
+ * @param userGithubId - Optional GitHub user ID to filter by starred repos
  * @returns Array of objects with org name and repo count
  */
-export async function getRepoCountsByOrg(): Promise<
-  Array<{ org: string; count: number }>
-> {
-  return query<{ org: string; count: number }>(
-    `SELECT 
-       SPLIT_PART(full_name, '/', 1) as org,
+export async function getRepoCountsByOrg(
+  userGithubId?: number | null,
+): Promise<Array<{ org: string; count: number }>> {
+  let sql = `SELECT 
+       SPLIT_PART(r.full_name, '/', 1) as org,
        COUNT(*)::int as count
-     FROM repos
-     GROUP BY org
-     ORDER BY org ASC`,
+     FROM repos r`;
+
+  if (userGithubId) {
+    sql += ` INNER JOIN repo_stars rs ON r.github_id = rs.repo_github_id
+             WHERE rs.user_github_id = $1`;
+  }
+
+  sql += ` GROUP BY org
+           ORDER BY org ASC`;
+
+  return query<{ org: string; count: number }>(
+    sql,
+    userGithubId ? [userGithubId] : [],
   );
 }
 
 /**
  * Gets all repositories for a specific organization.
+ * If userGithubId is provided, only returns repos the user has starred.
  *
  * @param org - Organization name
+ * @param userGithubId - Optional GitHub user ID to filter by starred repos
  * @returns Array of repository rows for that organization
  */
-export async function getReposByOrg(org: string): Promise<RepoRow[]> {
+export async function getReposByOrg(
+  org: string,
+  userGithubId?: number | null,
+): Promise<RepoRow[]> {
+  let sql = `SELECT r.id, r.github_id, r.name, r.full_name, r.private, r.archived, r.pushed_at, r.updated_at, r.created_at
+     FROM repos r`;
+
+  if (userGithubId) {
+    sql += ` INNER JOIN repo_stars rs ON r.github_id = rs.repo_github_id
+             WHERE r.full_name LIKE $1
+               AND rs.user_github_id = $2`;
+  } else {
+    sql += ` WHERE r.full_name LIKE $1`;
+  }
+
+  sql += ` ORDER BY r.name ASC`;
+
   return query<RepoRow>(
-    `SELECT id, github_id, name, full_name, private, archived, pushed_at, updated_at, created_at
-     FROM repos
-     WHERE full_name LIKE $1
-     ORDER BY name ASC`,
-    [`${org}/%`],
+    sql,
+    userGithubId ? [`${org}/%`, userGithubId] : [`${org}/%`],
   );
 }
 
@@ -259,17 +306,19 @@ export async function getRepoMaintainers(
  * Gets top repositories by open PR count.
  * Excludes issues/PRs where turn = 'author' (it's the author's turn to respond).
  * Includes stalled counts based on stall_interval parameter.
+ * If userGithubId is provided, only returns repos the user has starred.
  *
  * @param limit - Maximum number of repositories to return (default: 20)
  * @param stallInterval - PostgreSQL interval string (e.g., '14 days') for determining if work is stalled
+ * @param userGithubId - Optional GitHub user ID to filter by starred repos
  * @returns Array of repositories with open PR counts and stalled counts, sorted by count descending
  */
 export async function getTopReposByOpenPRs(
   limit: number = 20,
   stallInterval: string = "14 days",
+  userGithubId?: number | null,
 ): Promise<RepoWithPRCount[]> {
-  return query<RepoWithPRCount>(
-    `SELECT 
+  let sql = `SELECT 
        r.github_id,
        r.full_name,
        r.name,
@@ -305,8 +354,14 @@ export async function getTopReposByOpenPRs(
      LEFT JOIN pull_requests pr ON r.github_id = pr.repo_github_id
      LEFT JOIN issue_turns it_pr ON pr.github_id = it_pr.issue_github_id
      LEFT JOIN issues i ON r.github_id = i.repo_github_id
-     LEFT JOIN issue_turns it_i ON i.github_id = it_i.issue_github_id
-     GROUP BY r.github_id, r.full_name, r.name
+     LEFT JOIN issue_turns it_i ON i.github_id = it_i.issue_github_id`;
+
+  if (userGithubId) {
+    sql += ` INNER JOIN repo_stars rs ON r.github_id = rs.repo_github_id
+             WHERE rs.user_github_id = $3`;
+  }
+
+  sql += ` GROUP BY r.github_id, r.full_name, r.name
      HAVING COUNT(DISTINCT CASE 
          WHEN pr.state = 'open' 
          AND LOWER(pr.author_login) NOT LIKE '%bot%'
@@ -333,25 +388,45 @@ export async function getTopReposByOpenPRs(
          THEN i.id 
        END)
      ) DESC
-     LIMIT $1`,
-    [limit, stallInterval],
-  );
+     LIMIT $1`;
+
+  const params = userGithubId
+    ? [limit, stallInterval, userGithubId]
+    : [limit, stallInterval];
+
+  return query<RepoWithPRCount>(sql, params);
 }
 
 /**
  * Gets total count of open PRs across all repositories (human authors only, excludes bots).
  * Excludes PRs where turn = 'author' (it's the author's turn to respond).
+ * If userGithubId is provided, only counts PRs in repos the user has starred.
  *
+ * @param userGithubId - Optional GitHub user ID to filter by starred repos
  * @returns Total number of open PRs by human authors
  */
-export async function getTotalOpenPRs(): Promise<number> {
-  const result = await query<{ count: number }>(
-    `SELECT COUNT(*)::int as count
+export async function getTotalOpenPRs(
+  userGithubId?: number | null,
+): Promise<number> {
+  let sql = `SELECT COUNT(*)::int as count
      FROM pull_requests pr
-     LEFT JOIN issue_turns it ON pr.github_id = it.issue_github_id
-     WHERE pr.state = 'open'
+     INNER JOIN repos r ON pr.repo_github_id = r.github_id
+     LEFT JOIN issue_turns it ON pr.github_id = it.issue_github_id`;
+
+  if (userGithubId) {
+    sql += ` INNER JOIN repo_stars rs ON r.github_id = rs.repo_github_id
+             WHERE rs.user_github_id = $1`;
+  } else {
+    sql += ` WHERE 1=1`;
+  }
+
+  sql += ` AND pr.state = 'open'
        AND LOWER(pr.author_login) NOT LIKE '%bot%'
-       AND (it.turn IS NULL OR it.turn != 'author')`,
+       AND (it.turn IS NULL OR it.turn != 'author')`;
+
+  const result = await query<{ count: number }>(
+    sql,
+    userGithubId ? [userGithubId] : [],
   );
   return result[0]?.count ?? 0;
 }
@@ -359,30 +434,58 @@ export async function getTotalOpenPRs(): Promise<number> {
 /**
  * Gets total count of open issues across all repositories (human authors only, excludes bots).
  * Excludes issues where turn = 'author' (it's the author's turn to respond).
+ * If userGithubId is provided, only counts issues in repos the user has starred.
  *
+ * @param userGithubId - Optional GitHub user ID to filter by starred repos
  * @returns Total number of open issues by human authors
  */
-export async function getTotalOpenIssues(): Promise<number> {
-  const result = await query<{ count: number }>(
-    `SELECT COUNT(*)::int as count
+export async function getTotalOpenIssues(
+  userGithubId?: number | null,
+): Promise<number> {
+  let sql = `SELECT COUNT(*)::int as count
      FROM issues i
-     LEFT JOIN issue_turns it ON i.github_id = it.issue_github_id
-     WHERE i.state = 'open'
+     INNER JOIN repos r ON i.repo_github_id = r.github_id
+     LEFT JOIN issue_turns it ON i.github_id = it.issue_github_id`;
+
+  if (userGithubId) {
+    sql += ` INNER JOIN repo_stars rs ON r.github_id = rs.repo_github_id
+             WHERE rs.user_github_id = $1`;
+  } else {
+    sql += ` WHERE 1=1`;
+  }
+
+  sql += ` AND i.state = 'open'
        AND LOWER(i.author_login) NOT LIKE '%bot%'
-       AND (it.turn IS NULL OR it.turn != 'author')`,
+       AND (it.turn IS NULL OR it.turn != 'author')`;
+
+  const result = await query<{ count: number }>(
+    sql,
+    userGithubId ? [userGithubId] : [],
   );
   return result[0]?.count ?? 0;
 }
 
 /**
  * Gets total count of repositories in the database.
+ * If userGithubId is provided, only counts repos the user has starred.
  *
+ * @param userGithubId - Optional GitHub user ID to filter by starred repos
  * @returns Total number of repositories
  */
-export async function getTotalRepoCount(): Promise<number> {
+export async function getTotalRepoCount(
+  userGithubId?: number | null,
+): Promise<number> {
+  let sql = `SELECT COUNT(*)::int as count
+     FROM repos r`;
+
+  if (userGithubId) {
+    sql += ` INNER JOIN repo_stars rs ON r.github_id = rs.repo_github_id
+             WHERE rs.user_github_id = $1`;
+  }
+
   const result = await query<{ count: number }>(
-    `SELECT COUNT(*)::int as count
-     FROM repos`,
+    sql,
+    userGithubId ? [userGithubId] : [],
   );
   return result[0]?.count ?? 0;
 }
@@ -476,54 +579,101 @@ export async function getIssueTurnsByRepo(
 /**
  * Gets counts of active and stalled PRs and Issues across all repositories.
  * Excludes bots and items where turn = 'author'.
+ * If userGithubId is provided, only counts items in repos the user has starred.
  *
  * @param stallInterval - PostgreSQL interval string (e.g., '14 days') for determining if work is stalled
+ * @param userGithubId - Optional GitHub user ID to filter by starred repos
  * @returns Counts of active and stalled PRs and Issues
  */
 export async function getStalledWorkCounts(
   stallInterval: string = "14 days",
+  userGithubId?: number | null,
 ): Promise<StalledWorkCounts> {
+  const params = userGithubId ? [stallInterval, userGithubId] : [stallInterval];
+
   const result = await query<{
     type: "pr" | "issue";
     active: number;
     stalled: number;
   }>(
-    `WITH pr_turns AS (
-      SELECT 
-        pr.github_id,
-        it.turn,
-        it.last_maintainer_action_at,
-        (it.turn = 'maintainer' AND it.last_maintainer_action_at < NOW() - $1::interval) as stalled
-      FROM pull_requests pr
-      LEFT JOIN issue_turns it ON pr.github_id = it.issue_github_id
-      WHERE pr.state = 'open'
-        AND LOWER(pr.author_login) NOT LIKE '%bot%'
-        AND (it.turn IS NULL OR it.turn != 'author')
-    ),
-    issue_turns AS (
-      SELECT 
-        i.github_id,
-        it.turn,
-        it.last_maintainer_action_at,
-        (it.turn = 'maintainer' AND it.last_maintainer_action_at < NOW() - $1::interval) as stalled
-      FROM issues i
-      LEFT JOIN issue_turns it ON i.github_id = it.issue_github_id
-      WHERE i.state = 'open'
-        AND LOWER(i.author_login) NOT LIKE '%bot%'
-        AND (it.turn IS NULL OR it.turn != 'author')
-    )
-    SELECT 
-      'pr' as type,
-      COUNT(*) FILTER (WHERE NOT stalled OR stalled IS NULL)::int as active,
-      COUNT(*) FILTER (WHERE stalled = true)::int as stalled
-    FROM pr_turns
-    UNION ALL
-    SELECT 
-      'issue' as type,
-      COUNT(*) FILTER (WHERE NOT stalled OR stalled IS NULL)::int as active,
-      COUNT(*) FILTER (WHERE stalled = true)::int as stalled
-    FROM issue_turns`,
-    [stallInterval],
+    userGithubId
+      ? `WITH pr_turns AS (
+          SELECT 
+            pr.github_id,
+            it.turn,
+            it.last_maintainer_action_at,
+            (it.turn = 'maintainer' AND it.last_maintainer_action_at < NOW() - $1::interval) as stalled
+          FROM pull_requests pr
+          INNER JOIN repos r ON pr.repo_github_id = r.github_id
+          INNER JOIN repo_stars rs ON r.github_id = rs.repo_github_id
+          LEFT JOIN issue_turns it ON pr.github_id = it.issue_github_id
+          WHERE rs.user_github_id = $2
+            AND pr.state = 'open'
+            AND LOWER(pr.author_login) NOT LIKE '%bot%'
+            AND (it.turn IS NULL OR it.turn != 'author')
+        ),
+        issue_turns AS (
+          SELECT 
+            i.github_id,
+            it.turn,
+            it.last_maintainer_action_at,
+            (it.turn = 'maintainer' AND it.last_maintainer_action_at < NOW() - $1::interval) as stalled
+          FROM issues i
+          INNER JOIN repos r ON i.repo_github_id = r.github_id
+          INNER JOIN repo_stars rs ON r.github_id = rs.repo_github_id
+          LEFT JOIN issue_turns it ON i.github_id = it.issue_github_id
+          WHERE rs.user_github_id = $2
+            AND i.state = 'open'
+            AND LOWER(i.author_login) NOT LIKE '%bot%'
+            AND (it.turn IS NULL OR it.turn != 'author')
+        )
+        SELECT 
+          'pr' as type,
+          COUNT(*) FILTER (WHERE NOT stalled OR stalled IS NULL)::int as active,
+          COUNT(*) FILTER (WHERE stalled = true)::int as stalled
+        FROM pr_turns
+        UNION ALL
+        SELECT 
+          'issue' as type,
+          COUNT(*) FILTER (WHERE NOT stalled OR stalled IS NULL)::int as active,
+          COUNT(*) FILTER (WHERE stalled = true)::int as stalled
+        FROM issue_turns`
+      : `WITH pr_turns AS (
+          SELECT 
+            pr.github_id,
+            it.turn,
+            it.last_maintainer_action_at,
+            (it.turn = 'maintainer' AND it.last_maintainer_action_at < NOW() - $1::interval) as stalled
+          FROM pull_requests pr
+          LEFT JOIN issue_turns it ON pr.github_id = it.issue_github_id
+          WHERE pr.state = 'open'
+            AND LOWER(pr.author_login) NOT LIKE '%bot%'
+            AND (it.turn IS NULL OR it.turn != 'author')
+        ),
+        issue_turns AS (
+          SELECT 
+            i.github_id,
+            it.turn,
+            it.last_maintainer_action_at,
+            (it.turn = 'maintainer' AND it.last_maintainer_action_at < NOW() - $1::interval) as stalled
+          FROM issues i
+          LEFT JOIN issue_turns it ON i.github_id = it.issue_github_id
+          WHERE i.state = 'open'
+            AND LOWER(i.author_login) NOT LIKE '%bot%'
+            AND (it.turn IS NULL OR it.turn != 'author')
+        )
+        SELECT 
+          'pr' as type,
+          COUNT(*) FILTER (WHERE NOT stalled OR stalled IS NULL)::int as active,
+          COUNT(*) FILTER (WHERE stalled = true)::int as stalled
+        FROM pr_turns
+        UNION ALL
+        SELECT 
+          'issue' as type,
+          COUNT(*) FILTER (WHERE NOT stalled OR stalled IS NULL)::int as active,
+          COUNT(*) FILTER (WHERE stalled = true)::int as stalled
+        FROM issue_turns`,
+    params,
   );
 
   const prs = result.find((r) => r.type === "pr") || { active: 0, stalled: 0 };
@@ -598,9 +748,10 @@ export async function getIssuesByAuthor(
  *
  * @returns Array of pull request rows with repository full name
  */
-export async function getNonBotPullRequests(): Promise<PullRequestRow[]> {
-  return query<PullRequestRow>(
-    `SELECT
+export async function getNonBotPullRequests(
+  userGithubId?: number | null,
+): Promise<PullRequestRow[]> {
+  let sql = `SELECT
       pr.id,
       pr.github_id,
       pr.repo_github_id,
@@ -626,8 +777,17 @@ export async function getNonBotPullRequests(): Promise<PullRequestRow[]> {
       it.turn
     FROM pull_requests pr
     INNER JOIN repos r ON pr.repo_github_id = r.github_id
-    LEFT JOIN issue_turns it ON pr.github_id = it.issue_github_id
-    WHERE LOWER(pr.author_login) NOT LIKE '%bot%'
-    ORDER BY pr.updated_at DESC`,
-  );
+    LEFT JOIN issue_turns it ON pr.github_id = it.issue_github_id`;
+
+  if (userGithubId) {
+    sql += ` INNER JOIN repo_stars rs ON r.github_id = rs.repo_github_id
+             WHERE rs.user_github_id = $1
+               AND LOWER(pr.author_login) NOT LIKE '%bot%'`;
+  } else {
+    sql += ` WHERE LOWER(pr.author_login) NOT LIKE '%bot%'`;
+  }
+
+  sql += ` ORDER BY pr.updated_at DESC`;
+
+  return query<PullRequestRow>(sql, userGithubId ? [userGithubId] : []);
 }

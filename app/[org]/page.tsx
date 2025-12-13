@@ -1,11 +1,8 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { getCurrentUser } from "../../lib/auth";
-import {
-  getReposByOrg,
-  getRepoStats,
-  type RepoRow,
-} from "../../lib/queries";
+import { getReposByOrg, getRepoStats, type RepoRow } from "../../lib/queries";
 
 interface OrgPageProps {
   params: {
@@ -20,9 +17,15 @@ export default async function OrgPage({ params }: OrgPageProps) {
     redirect("/");
   }
 
+  // Read starredOnly preference from cookie
+  const cookieStore = await cookies();
+  const starredOnlyCookie = cookieStore.get("starredOnly");
+  const starredOnly = starredOnlyCookie?.value === "true";
+  const userGithubId = starredOnly ? user.github_id : null;
+
   const [repos, stats] = await Promise.all([
-    getReposByOrg(params.org),
-    getRepoStats(),
+    getReposByOrg(params.org, userGithubId),
+    getRepoStats(userGithubId),
   ]);
 
   // Create a map of stats by repo_github_id for quick lookup

@@ -1,4 +1,5 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import Link from "next/link";
 import { getCurrentUser } from "../lib/auth";
 import {
@@ -39,6 +40,12 @@ export default async function HomePage() {
     );
   }
 
+  // Read starredOnly preference from cookie
+  const cookieStore = await cookies();
+  const starredOnlyCookie = cookieStore.get("starredOnly");
+  const starredOnly = starredOnlyCookie?.value === "true";
+  const userGithubId = starredOnly ? user.github_id : null;
+
   const stallInterval = "14 days";
 
   const [
@@ -51,14 +58,14 @@ export default async function HomePage() {
     totalRepoCount,
     stalledCounts,
   ] = await Promise.all([
-    getOrgs(),
-    getRepoCountsByOrg(),
-    getNonBotPullRequests(),
-    getTopReposByOpenPRs(20, stallInterval),
-    getTotalOpenPRs(),
-    getTotalOpenIssues(),
-    getTotalRepoCount(),
-    getStalledWorkCounts(stallInterval),
+    getOrgs(userGithubId),
+    getRepoCountsByOrg(userGithubId),
+    getNonBotPullRequests(userGithubId),
+    getTopReposByOpenPRs(20, stallInterval, userGithubId),
+    getTotalOpenPRs(userGithubId),
+    getTotalOpenIssues(userGithubId),
+    getTotalRepoCount(userGithubId),
+    getStalledWorkCounts(stallInterval, userGithubId),
   ]);
 
   // Create a map for quick lookup of repo counts by org
