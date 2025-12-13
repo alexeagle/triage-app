@@ -302,6 +302,41 @@ export async function getRepoMaintainers(
   );
 }
 
+export interface RepoWithMaintainerStats {
+  github_id: number;
+  full_name: string;
+  name: string;
+  open_prs_count: number;
+  open_issues_count: number;
+}
+
+/**
+ * Gets all repositories where a user is a maintainer, with open PR and issue counts.
+ *
+ * @param userGithubId - GitHub ID of the user
+ * @returns Array of repositories with stats, sorted by full_name
+ */
+export async function getReposByMaintainer(
+  userGithubId: number,
+): Promise<RepoWithMaintainerStats[]> {
+  return query<RepoWithMaintainerStats>(
+    `SELECT 
+       r.github_id,
+       r.full_name,
+       r.name,
+       COUNT(DISTINCT CASE WHEN pr.state = 'open' THEN pr.id END)::int as open_prs_count,
+       COUNT(DISTINCT CASE WHEN i.state = 'open' THEN i.id END)::int as open_issues_count
+     FROM repo_maintainers rm
+     INNER JOIN repos r ON rm.repo_github_id = r.github_id
+     LEFT JOIN pull_requests pr ON r.github_id = pr.repo_github_id
+     LEFT JOIN issues i ON r.github_id = i.repo_github_id
+     WHERE rm.github_user_id = $1
+     GROUP BY r.github_id, r.full_name, r.name
+     ORDER BY r.full_name ASC`,
+    [userGithubId],
+  );
+}
+
 /**
  * Gets top repositories by open PR count.
  * Excludes issues/PRs where turn = 'author' (it's the author's turn to respond).
