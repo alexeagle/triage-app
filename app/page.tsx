@@ -131,11 +131,11 @@ export default async function HomePage() {
       </nav>
       <div className="container mx-auto px-4 py-8 max-w-full">
         {maintainerRepos.length > 0 && (
-          <div className="mb-8">
-            <h2 className="text-2xl font-semibold mb-4">
+          <div className="mb-6">
+            <h2 className="text-xl font-semibold mb-2">
               {maintainerRepos.length} Repositories You Maintain (thank you!)
             </h2>
-            <ul className="space-y-2">
+            <ul className="space-y-1">
               {(() => {
                 // Calculate max total for scaling
                 const maxTotal = Math.max(
@@ -159,7 +159,7 @@ export default async function HomePage() {
                   return (
                     <li
                       key={repo.github_id}
-                      className="relative py-2 px-3 rounded border border-gray-200 hover:border-gray-300 transition-colors"
+                      className="relative py-1 px-3 rounded border border-gray-200 hover:border-gray-300 transition-colors"
                     >
                       {/* Bar chart background */}
                       <div className="absolute inset-0 flex gap-0.5 rounded overflow-hidden opacity-20">
@@ -196,8 +196,23 @@ export default async function HomePage() {
             </ul>
           </div>
         )}
+        <hr />
+        <h2 className="text-2xl font-semibold mb-8 mt-8">
+          Pull Requests (Non-Bot Authors)
+        </h2>
+        {nonBotPRs.length === 0 ? (
+          <p className="text-gray-600 text-sm">No pull requests found.</p>
+        ) : (
+          <PullRequestsTable
+            pullRequests={nonBotPRs}
+            repoFullName=""
+            defaultTimeFilter="day"
+            maintainerRepoIds={maintainerRepos.map((r) => r.github_id)}
+          />
+        )}
+        <hr />
 
-        <h2 className="text-2xl font-semibold mb-4 flex items-center">
+        <h2 className="text-2xl font-semibold mb-8 flex items-center mt-8">
           Human-authored PRs/Issues waiting on Maintainer (Top 20 repos)
           <InfoTooltip
             content={
@@ -273,22 +288,6 @@ export default async function HomePage() {
             stallInterval={stallInterval}
           />
         </div>
-
-        <section>
-          <h2 className="text-2xl font-semibold mb-4">
-            Pull Requests (Non-Bot Authors)
-          </h2>
-          {nonBotPRs.length === 0 ? (
-            <p className="text-gray-600 text-sm">No pull requests found.</p>
-          ) : (
-            <PullRequestsTable
-              pullRequests={nonBotPRs}
-              repoFullName=""
-              defaultTimeFilter="day"
-              maintainerRepoIds={maintainerRepos.map((r) => r.github_id)}
-            />
-          )}
-        </section>
       </div>
     </>
   );
