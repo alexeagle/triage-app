@@ -159,6 +159,70 @@ export async function* fetchUpdatedIssuesSince(
 }
 
 /**
+ * Fetches issues that were closed since a specific timestamp.
+ * Used for incremental sync to catch issues that were closed but may not have been updated recently.
+ * Automatically filters out pull requests (GitHub API returns both issues and PRs).
+ *
+ * Note: GitHub API doesn't support filtering by closed_at directly, so we fetch closed issues
+ * and filter client-side by closed_at timestamp.
+ *
+ * @param repo - Repository object with owner and name
+ * @param api - GitHub API client instance
+ * @param sinceTimestamp - ISO 8601 timestamp (YYYY-MM-DDTHH:MM:SSZ) to fetch issues closed after this time
+ * @returns Async generator yielding batches of issues
+ */
+export async function* fetchClosedIssuesSince(
+  repo: Repo,
+  api: GitHubAPI,
+  sinceTimestamp: string,
+): AsyncGenerator<IssueBatch> {
+  let page = 1;
+  const perPage = 100;
+  const sinceDate = new Date(sinceTimestamp);
+
+  while (true) {
+    const items = await api.request<Issue[]>({
+      method: "GET",
+      url: "/repos/{owner}/{repo}/issues",
+      owner: repo.owner.login,
+      repo: repo.name,
+      state: "closed",
+      since: sinceTimestamp, // Still use since to limit the search space
+      page,
+      per_page: perPage,
+      sort: "updated",
+      direction: "desc",
+    });
+
+    // Filter out pull requests and filter by closed_at timestamp
+    const issues = items
+      .filter((item) => !item.pull_request)
+      .filter((item) => {
+        // Only include issues that were closed after the since timestamp
+        if (!item.closed_at) {
+          return false;
+        }
+        const closedDate = new Date(item.closed_at);
+        return closedDate >= sinceDate;
+      });
+
+    const hasMore = items.length === perPage;
+
+    yield {
+      issues,
+      page,
+      hasMore,
+    };
+
+    if (!hasMore) {
+      break;
+    }
+
+    page++;
+  }
+}
+
+/**
  * GitHub API response for an issue comment.
  */
 export interface IssueComment {

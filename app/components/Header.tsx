@@ -52,7 +52,7 @@ export default function Header() {
       <div className="flex items-center gap-2">
         <img src="/logo.png" alt="Triage App" className="w-8 h-8" />
         <span className="font-semibold">Alex's Triage App</span>
-        <i className="text-sm text-gray-600 text-center">
+        <i className="hidden md:block text-sm text-gray-600 text-center">
           &ldquo;It's like{" "}
           <a
             href="https://dashboard.bazel.build/"

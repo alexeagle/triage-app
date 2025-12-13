@@ -10,6 +10,7 @@ import { fetchOrgRepos, type Repo } from "../github/repos.js";
 import {
   fetchRepoIssues,
   fetchUpdatedIssuesSince,
+  fetchClosedIssuesSince,
   type Issue,
 } from "../github/issues.js";
 import {
@@ -90,64 +91,103 @@ export async function syncIncremental(
           console.log(
             `  📋 Incremental issue sync (since ${syncState.last_issue_sync})...`,
           );
-          let batchCount = 0;
+
+          // Use a Set to track processed issue IDs to avoid duplicates
+          const processedIssueIds = new Set<number>();
+
+          // Helper function to process an issue
+          const processIssue = async (issue: Issue) => {
+            // Skip if we've already processed this issue
+            if (processedIssueIds.has(issue.id)) {
+              return;
+            }
+            processedIssueIds.add(issue.id);
+
+            try {
+              await upsertIssue(issue, repo.id);
+
+              // Upsert issue author
+              try {
+                await upsertGitHubUser({
+                  github_id: issue.user.id,
+                  login: issue.user.login,
+                  avatar_url: issue.user.avatar_url,
+                  name: issue.user.name,
+                  type: issue.user.type,
+                });
+              } catch (error) {
+                console.warn(
+                  `  ⚠ Failed to upsert author ${issue.user.login}: ${error}`,
+                );
+              }
+
+              // Upsert issue assignees
+              for (const assignee of issue.assignees) {
+                try {
+                  await upsertGitHubUser({
+                    github_id: assignee.id,
+                    login: assignee.login,
+                    avatar_url: assignee.avatar_url,
+                    name: assignee.name,
+                    type: assignee.type,
+                  });
+                } catch (error) {
+                  console.warn(
+                    `  ⚠ Failed to upsert assignee ${assignee.login}: ${error}`,
+                  );
+                }
+              }
+            } catch (error) {
+              const errorMessage =
+                error instanceof Error ? error.message : String(error);
+              console.error(
+                `  ⚠ Failed to upsert issue #${issue.number}: ${errorMessage}`,
+              );
+              result.errors.push({
+                repo: repo.full_name,
+                error: `Issue #${issue.number}: ${errorMessage}`,
+              });
+            }
+          };
+
+          // Fetch updated issues (includes both open and closed that were updated)
+          let updatedIssuesFetched = 0;
           for await (const batch of fetchUpdatedIssuesSince(
             repo,
             api,
             syncState.last_issue_sync,
           )) {
-            batchCount++;
-            repoIssuesCount += batch.issues.length;
+            updatedIssuesFetched += batch.issues.length;
 
             for (const issue of batch.issues) {
-              try {
-                await upsertIssue(issue, repo.id);
-
-                // Upsert issue author
-                try {
-                  await upsertGitHubUser({
-                    github_id: issue.user.id,
-                    login: issue.user.login,
-                    avatar_url: issue.user.avatar_url,
-                    name: issue.user.name,
-                    type: issue.user.type,
-                  });
-                } catch (error) {
-                  console.warn(
-                    `  ⚠ Failed to upsert author ${issue.user.login}: ${error}`,
-                  );
-                }
-
-                // Upsert issue assignees
-                for (const assignee of issue.assignees) {
-                  try {
-                    await upsertGitHubUser({
-                      github_id: assignee.id,
-                      login: assignee.login,
-                      avatar_url: assignee.avatar_url,
-                      name: assignee.name,
-                      type: assignee.type,
-                    });
-                  } catch (error) {
-                    console.warn(
-                      `  ⚠ Failed to upsert assignee ${assignee.login}: ${error}`,
-                    );
-                  }
-                }
-              } catch (error) {
-                const errorMessage =
-                  error instanceof Error ? error.message : String(error);
-                console.error(
-                  `  ⚠ Failed to upsert issue #${issue.number}: ${errorMessage}`,
-                );
-                result.errors.push({
-                  repo: repo.full_name,
-                  error: `Issue #${issue.number}: ${errorMessage}`,
-                });
-              }
+              await processIssue(issue);
             }
           }
-          console.log(`  ✅ Synced ${repoIssuesCount} updated issues`);
+
+          // Also fetch recently closed issues (to catch issues closed but not recently updated)
+          let closedIssuesFetched = 0;
+          for await (const batch of fetchClosedIssuesSince(
+            repo,
+            api,
+            syncState.last_issue_sync,
+          )) {
+            closedIssuesFetched += batch.issues.length;
+
+            for (const issue of batch.issues) {
+              await processIssue(issue);
+            }
+          }
+
+          // Count unique issues processed
+          repoIssuesCount = processedIssueIds.size;
+
+          if (closedIssuesFetched > 0) {
+            console.log(
+              `  ✅ Synced ${repoIssuesCount} unique issues (${updatedIssuesFetched} updated, ${closedIssuesFetched} recently closed)`,
+            );
+          } else {
+            console.log(`  ✅ Synced ${repoIssuesCount} updated issues`);
+          }
         } else {
           console.log(`  📋 Full issue sync (no previous sync state)...`);
           let batchCount = 0;
