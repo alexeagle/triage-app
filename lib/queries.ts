@@ -525,8 +525,6 @@ export async function getTotalRepoCount(
   return result[0]?.count ?? 0;
 }
 
-export const PAGE_SIZE = 20;
-
 export interface IssueTurnRow {
   issue_github_id: number;
   repo_full_name: string;
@@ -727,54 +725,6 @@ export async function getStalledWorkCounts(
       stalled: issues.stalled,
     },
   };
-}
-
-/**
- * Gets open issues by author login, ordered by updated_at descending.
- *
- * @param author - Author login (GitHub username)
- * @returns Array of open issue rows with repository full name
- */
-export async function getIssuesByAuthor(
-  author: string,
-  offset: number,
-): Promise<{ issues: IssueRow[]; total: number }> {
-  const issues = await query<IssueRow>(
-    `SELECT
-      i.id,
-      i.github_id,
-      i.repo_github_id,
-      i.number,
-      i.title,
-      i.body,
-      i.state,
-      i.created_at,
-      i.updated_at,
-      i.closed_at,
-      i.labels,
-      i.assignees,
-      i.author_login,
-      i.synced_at,
-      r.full_name as repo_full_name,
-      gu.avatar_url as author_avatar_url
-    FROM issues i
-    INNER JOIN repos r ON i.repo_github_id = r.github_id
-    LEFT JOIN github_users gu ON i.author_login = gu.login
-    WHERE i.author_login = $1 AND i.state = 'open'
-    ORDER BY i.updated_at DESC
-    LIMIT $2
-    OFFSET $3
-    `,
-    [author, PAGE_SIZE, offset],
-  );
-  const totalResult = await query<{ count: number }>(
-    `SELECT COUNT(*)::int AS count
-      FROM issues
-      WHERE author_login = $1 AND state = 'open'`,
-    [author],
-  );
-  const total = totalResult[0].count;
-  return { issues, total };
 }
 
 /**

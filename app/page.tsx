@@ -12,7 +12,6 @@ import {
   getRepoCountsByOrg,
   getStalledWorkCounts,
   getReposByMaintainer,
-  PAGE_SIZE,
 } from "../lib/queries";
 import PullRequestsTable from "./components/PullRequestsTable";
 import PRCountBarChartWrapper from "./components/PRCountBarChartWrapper";
@@ -285,8 +284,6 @@ export default async function HomePage() {
             <PullRequestsTable
               pullRequests={nonBotPRs}
               repoFullName=""
-              page={1}
-              totalPages={Math.ceil(nonBotPRs.length / PAGE_SIZE)}
               defaultTimeFilter="day"
               maintainerRepoIds={maintainerRepos.map((r) => r.github_id)}
             />

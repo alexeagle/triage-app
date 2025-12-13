@@ -9,7 +9,6 @@ import {
   getRepoMaintainers,
   IssueRow,
   MaintainerRow,
-  PAGE_SIZE,
 } from "../../../lib/queries";
 import IssuesTable from "../../components/IssuesTable";
 import PullRequestsTable from "../../components/PullRequestsTable";
@@ -121,8 +120,6 @@ export default async function RepoPage({ params }: RepoPageProps) {
           <PullRequestsTable
             pullRequests={pullRequests}
             repoFullName={repo.full_name}
-            page={1}
-            totalPages={Math.ceil(pullRequests.length / PAGE_SIZE)}
           />
         )}
       </section>
@@ -139,8 +136,6 @@ export default async function RepoPage({ params }: RepoPageProps) {
                 repo_full_name: repo.full_name,
               }),
             )}
-            page={1}
-            totalPages={Math.ceil(issues.length / PAGE_SIZE)}
           />
         )}
       </section>
