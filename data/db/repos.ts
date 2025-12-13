@@ -4,7 +4,7 @@
  * Provides functions for upserting repository data.
  */
 
-import { query } from "./index.js";
+import { query } from "./index";
 import type { Repo } from "../github/repos.js";
 
 /**

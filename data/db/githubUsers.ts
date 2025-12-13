@@ -4,7 +4,7 @@
  * Provides functions for upserting GitHub user data and managing maintainer status.
  */
 
-import { query } from "./index.js";
+import { query } from "./index";
 
 export interface GitHubUserInput {
   github_id: number;
