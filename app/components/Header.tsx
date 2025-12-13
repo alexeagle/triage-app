@@ -4,38 +4,66 @@ import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleNotch } from "@fortawesome/free-solid-svg-icons";
-import { getStarredOnlyFilter, setStarredOnlyFilter } from "../../lib/filters";
 import GitHubUser from "./GitHubUser";
 
 export default function Header() {
   const { data: session } = useSession();
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  // Initialize from localStorage, default to false
+  // Initialize from database, default to false
   const [starredOnly, setStarredOnly] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
 
-  // Load preference from localStorage on mount and sync to cookie
+  // Load preference from database on mount
   useEffect(() => {
-    const value = getStarredOnlyFilter();
-    setStarredOnly(value);
-    // Sync to cookie so server components can read it
-    document.cookie = `starredOnly=${value ? "true" : "false"}; path=/; max-age=31536000`; // 1 year
-  }, []);
+    if (!session) {
+      setIsLoading(false);
+      return;
+    }
 
-  const handleToggle = () => {
+    fetch("/api/user/preferences")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.starred_only !== undefined) {
+          setStarredOnly(data.starred_only);
+        }
+        setIsLoading(false);
+      })
+      .catch((error) => {
+        console.error("Error loading preferences:", error);
+        setIsLoading(false);
+      });
+  }, [session]);
+
+  const handleToggle = async () => {
     const newValue = !starredOnly;
     setStarredOnly(newValue);
-    setStarredOnlyFilter(newValue);
-    // Sync to cookie so server components can read it
-    document.cookie = `starredOnly=${newValue ? "true" : "false"}; path=/; max-age=31536000`; // 1 year
-    // Trigger a custom event so other components can react to the change
-    window.dispatchEvent(
-      new CustomEvent("starredOnlyChanged", { detail: newValue }),
-    );
-    // Refresh the page data (server components will re-fetch with new filter)
-    startTransition(() => {
-      router.refresh();
-    });
+
+    try {
+      const response = await fetch("/api/user/preferences", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ starred_only: newValue }),
+      });
+
+      if (!response.ok) {
+        // Revert on error
+        setStarredOnly(starredOnly);
+        console.error("Failed to update preference");
+        return;
+      }
+
+      // Refresh the page data (server components will re-fetch with new filter)
+      startTransition(() => {
+        router.refresh();
+      });
+    } catch (error) {
+      // Revert on error
+      setStarredOnly(starredOnly);
+      console.error("Error updating preference:", error);
+    }
   };
 
   if (!session) {
@@ -73,12 +101,12 @@ export default function Header() {
             role="switch"
             aria-checked={starredOnly}
             onClick={handleToggle}
-            disabled={isPending}
+            disabled={isPending || isLoading}
             className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 ${
               starredOnly ? "bg-blue-600" : "bg-gray-300"
             }`}
           >
-            {isPending ? (
+            {isPending || isLoading ? (
               <div className="absolute inset-0 flex items-center justify-center">
                 <FontAwesomeIcon
                   icon={faCircleNotch}

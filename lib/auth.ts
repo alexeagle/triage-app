@@ -15,6 +15,7 @@ export interface UserRow {
   name: string | null;
   avatar_url: string | null;
   created_at: string;
+  starred_only: boolean;
 }
 
 interface GitHubProfile {
@@ -67,7 +68,7 @@ export async function getCurrentUser(): Promise<UserRow | null> {
   }
 
   const results = await query<UserRow>(
-    `SELECT id, github_id, login, name, avatar_url, created_at
+    `SELECT id, github_id, login, name, avatar_url, created_at, COALESCE(starred_only, false) as starred_only
      FROM users
      WHERE github_id = $1`,
     [githubId],

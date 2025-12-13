@@ -42,10 +42,8 @@ export default async function HomePage() {
     );
   }
 
-  // Read starredOnly preference from cookie
-  const cookieStore = await cookies();
-  const starredOnlyCookie = cookieStore.get("starredOnly");
-  const starredOnly = starredOnlyCookie?.value === "true";
+  // Read starredOnly preference from database
+  const starredOnly = user.starred_only ?? false;
   const userGithubId = starredOnly ? user.github_id : null;
 
   const stallInterval = "14 days";

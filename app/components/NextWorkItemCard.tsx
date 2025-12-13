@@ -62,16 +62,11 @@ export default function NextWorkItemCard({ item }: NextWorkItemCardProps) {
               </span>
             )}
           </div>
-          <Link
-            href={`/${item.repo_full_name}/${item.item_type === "pr" ? "pull" : "issues"}/${item.number}`}
-            className="text-blue-600 hover:text-blue-800 hover:underline font-semibold text-lg block mb-1"
-          >
-            {item.repo_full_name}#{item.number}
-          </Link>
           <h3 className="text-gray-900 font-medium mb-2 line-clamp-2">
-            {item.title}
+            {item.repo_full_name}#{item.number} {item.title}
           </h3>
           <p className="text-sm text-gray-600">{whyText}</p>
+          {/* TODO: show a summary of recent interactions to help the user decide what to do next*/}
         </div>
       </div>
       <div className="flex gap-3">
