@@ -3,6 +3,8 @@ import type { NextWorkItemRow } from "../../lib/queries";
 
 interface NextWorkItemCardProps {
   item: NextWorkItemRow;
+  onSnooze?: () => void;
+  isPending?: boolean;
 }
 
 function formatDaysAgo(dateString: string): string {
@@ -20,7 +22,11 @@ function formatDaysAgo(dateString: string): string {
   }
 }
 
-export default function NextWorkItemCard({ item }: NextWorkItemCardProps) {
+export default function NextWorkItemCard({
+  item,
+  onSnooze,
+  isPending = false,
+}: NextWorkItemCardProps) {
   const githubUrl = `https://github.com/${item.repo_full_name}/${item.item_type === "pr" ? "pull" : "issues"}/${item.number}`;
 
   // Generate "why" text
@@ -69,7 +75,7 @@ export default function NextWorkItemCard({ item }: NextWorkItemCardProps) {
           {/* TODO: show a summary of recent interactions to help the user decide what to do next*/}
         </div>
       </div>
-      <div className="flex gap-3">
+      <div className="flex gap-3 items-center">
         <a
           href={githubUrl}
           target="_blank"
@@ -78,6 +84,17 @@ export default function NextWorkItemCard({ item }: NextWorkItemCardProps) {
         >
           Open on GitHub
         </a>
+        {onSnooze && (
+          <button
+            type="button"
+            onClick={onSnooze}
+            disabled={isPending}
+            className="text-sm text-gray-600 hover:text-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+            title="Hide this suggestion for 7 days"
+          >
+            Snooze for 7 days
+          </button>
+        )}
       </div>
     </div>
   );

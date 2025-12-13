@@ -797,6 +797,7 @@ export interface NextWorkItemRow {
   turn: "maintainer" | "author" | null;
   last_interaction_at: string | null;
   updated_at: string;
+  github_id: number;
 }
 
 /**
@@ -805,11 +806,13 @@ export interface NextWorkItemRow {
  *
  * @param userGithubId - GitHub ID of the logged-in user
  * @param stallInterval - PostgreSQL interval string (default: '14 days')
+ * @param snoozedItems - Array of snoozed items to exclude: [{ type: 'issue'|'pr', id: number }]
  * @returns The recommended work item, or null if nothing actionable exists
  */
 export async function getNextWorkItem(
   userGithubId: number,
   stallInterval: string = "14 days",
+  snoozedItems: Array<{ type: "issue" | "pr"; id: number }> = [],
 ): Promise<NextWorkItemRow | null> {
   const sql = `
 WITH user_info AS (
@@ -935,6 +938,7 @@ scored_items AS (
     turn,
     stalled,
     last_interaction_at,
+    github_id,
     -- Calculate score (additive)
     (
       CASE WHEN stalled THEN 50 ELSE 0 END +
@@ -945,9 +949,31 @@ scored_items AS (
       CASE WHEN updated_at < NOW() - '30 days'::interval THEN -10 ELSE 0 END
     ) AS score
   FROM (
-    SELECT * FROM eligible_issues
+    SELECT 
+      github_id,
+      item_type,
+      repo_full_name,
+      number,
+      title,
+      updated_at,
+      turn,
+      stalled,
+      last_interaction_at,
+      is_assigned
+    FROM eligible_issues
     UNION ALL
-    SELECT * FROM eligible_prs
+    SELECT 
+      github_id,
+      item_type,
+      repo_full_name,
+      number,
+      title,
+      updated_at,
+      turn,
+      stalled,
+      last_interaction_at,
+      is_assigned
+    FROM eligible_prs
   ) combined
 )
 SELECT
@@ -959,15 +985,35 @@ SELECT
   stalled,
   turn,
   last_interaction_at,
-  updated_at
+  updated_at,
+  github_id
 FROM scored_items
+${
+  snoozedItems.length > 0
+    ? `WHERE NOT EXISTS (
+  SELECT 1
+  FROM (VALUES ${snoozedItems
+    .map((_, i) => {
+      const typeParam = 3 + i * 2;
+      const idParam = 4 + i * 2;
+      return `($${typeParam}::text, $${idParam}::bigint)`;
+    })
+    .join(", ")} ) AS snoozed(type, id)
+  WHERE snoozed.type = scored_items.item_type
+    AND snoozed.id = scored_items.github_id
+)`
+    : ""
+}
 ORDER BY score DESC, updated_at DESC
 LIMIT 1;
 `;
 
-  const results = await query<NextWorkItemRow>(sql, [
-    userGithubId,
-    stallInterval,
-  ]);
+  // Build parameters array
+  const params: unknown[] = [userGithubId, stallInterval];
+  snoozedItems.forEach((item) => {
+    params.push(item.type, item.id);
+  });
+
+  const results = await query<NextWorkItemRow>(sql, params);
   return results.length > 0 ? results[0] : null;
 }

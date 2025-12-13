@@ -12,12 +12,11 @@ import {
   getRepoCountsByOrg,
   getStalledWorkCounts,
   getReposByMaintainer,
-  getNextWorkItem,
 } from "../lib/queries";
 import PullRequestsTable from "./components/PullRequestsTable";
 import PRCountBarChartWrapper from "./components/PRCountBarChartWrapper";
 import InfoTooltip from "./components/InfoTooltip";
-import NextWorkItemCard from "./components/NextWorkItemCard";
+import NextWorkItemSection from "./components/NextWorkItemSection";
 import { faBuilding, faDatabase } from "@fortawesome/free-solid-svg-icons";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 
@@ -49,7 +48,6 @@ export default async function HomePage() {
   const stallInterval = "14 days";
 
   const [
-    nextWorkItem,
     orgs,
     repoCountsByOrg,
     nonBotPRs,
@@ -60,7 +58,6 @@ export default async function HomePage() {
     stalledCounts,
     maintainerRepos,
   ] = await Promise.all([
-    getNextWorkItem(user.github_id, stallInterval),
     getOrgs(userGithubId),
     getRepoCountsByOrg(userGithubId),
     getNonBotPullRequests(userGithubId),
@@ -134,18 +131,7 @@ export default async function HomePage() {
       </nav>
       <div className="container mx-auto px-4 py-8 max-w-full">
         {/* What should I work on next? - Always visible */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-semibold mb-4">
-            What should I work on next?
-          </h2>
-          {nextWorkItem ? (
-            <NextWorkItemCard item={nextWorkItem} />
-          ) : (
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
-              <p className="text-gray-600">Nothing urgent right now.</p>
-            </div>
-          )}
-        </div>
+        <NextWorkItemSection />
 
         {/* Desktop-only content - hidden on mobile */}
         <div className="hidden md:block">
