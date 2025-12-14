@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "type": "object",
+  "required": ["summary", "signals", "suggested_next_steps"],
+  "properties": {
+    "summary": {
+      "type": "object",
+      "required": [
+        "core_issue",
+        "current_state",
+        "last_meaningful_update_days_ago",
+        "involved_users"
+      ],
+      "properties": {
+        "core_issue": { "type": "string" },
+        "current_state": { "type": "string" },
+        "last_meaningful_update_days_ago": { "type": "number" },
+        "involved_users": {
+          "type": "object",
+          "required": ["maintainers", "contributors"],
+          "properties": {
+            "maintainers": {
+              "type": "array",
+              "items": { "type": "string" }
+            },
+            "contributors": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "signals": {
+      "type": "object",
+      "required": ["needs_info", "likely_stale", "blocked"],
+      "properties": {
+        "needs_info": { "type": "boolean" },
+        "likely_stale": { "type": "boolean" },
+        "blocked": { "type": "boolean" }
+      }
+    },
+    "suggested_next_steps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["type", "confidence"],
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "ask_for_repro",
+              "add_label",
+              "request_review",
+              "close_stale"
+            ]
+          },
+          "confidence": {
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1
+          }
+        }
+      }
+    }
+  }
+}

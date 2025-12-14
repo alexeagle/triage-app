@@ -1,10 +1,33 @@
-import Link from "next/link";
+"use client";
+
+import { useState } from "react";
 import type { NextWorkItemRow } from "../../lib/queries";
 
 interface NextWorkItemCardProps {
   item: NextWorkItemRow;
   onSnooze?: () => void;
   isPending?: boolean;
+}
+
+interface AISummary {
+  summary: {
+    core_issue: string;
+    current_state: string;
+    last_meaningful_update_days_ago: number;
+    involved_users: {
+      maintainers: string[];
+      contributors: string[];
+    };
+  };
+  signals: {
+    needs_info: boolean;
+    likely_stale: boolean;
+    blocked: boolean;
+  };
+  suggested_next_steps: Array<{
+    type: string;
+    confidence: number;
+  }>;
 }
 
 function formatDaysAgo(dateString: string): string {
@@ -27,6 +50,11 @@ export default function NextWorkItemCard({
   onSnooze,
   isPending = false,
 }: NextWorkItemCardProps) {
+  const [isAISummaryExpanded, setIsAISummaryExpanded] = useState(false);
+  const [aiSummary, setAiSummary] = useState<AISummary | null>(null);
+  const [isLoadingAISummary, setIsLoadingAISummary] = useState(false);
+  const [aiSummaryError, setAiSummaryError] = useState(false);
+
   const githubUrl = `https://github.com/${item.repo_full_name}/${item.item_type === "pr" ? "pull" : "issues"}/${item.number}`;
 
   // Generate "why" text
@@ -54,6 +82,45 @@ export default function NextWorkItemCard({
     }
   }
 
+  const handleAISummaryToggle = async () => {
+    if (isAISummaryExpanded) {
+      setIsAISummaryExpanded(false);
+      return;
+    }
+
+    setIsAISummaryExpanded(true);
+
+    // Only fetch if we don't already have the summary
+    if (aiSummary !== null) {
+      return;
+    }
+
+    setIsLoadingAISummary(true);
+    setAiSummaryError(false);
+
+    try {
+      const response = await fetch("/api/ai/next-work-item-summary", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ workItemId: String(item.github_id) }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch AI summary");
+      }
+
+      const data = await response.json();
+      setAiSummary(data);
+    } catch (error) {
+      console.error("Error fetching AI summary:", error);
+      setAiSummaryError(true);
+    } finally {
+      setIsLoadingAISummary(false);
+    }
+  };
+
   return (
     <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
       <div className="flex items-start justify-between gap-4 mb-4">
@@ -72,10 +139,82 @@ export default function NextWorkItemCard({
             {item.repo_full_name}#{item.number} {item.title}
           </h3>
           <p className="text-sm text-gray-600">{whyText}</p>
-          {/* TODO: show a summary of recent interactions to help the user decide what to do next*/}
         </div>
       </div>
-      <div className="flex gap-3 items-center">
+      <div className="mt-4 pt-4 border-t border-gray-200">
+        <button
+          type="button"
+          onClick={handleAISummaryToggle}
+          className="w-full flex items-center justify-between text-sm text-gray-700 hover:text-gray-900"
+        >
+          <span className="font-medium">AI summary</span>
+          <span className="text-gray-500">
+            {isAISummaryExpanded ? "−" : "+"}
+          </span>
+        </button>
+        {isAISummaryExpanded && (
+          <div className="mt-3 text-sm text-gray-600">
+            {isLoadingAISummary && (
+              <div className="flex items-center gap-2">
+                <span className="inline-block w-4 h-4 border-2 border-gray-300 border-t-blue-600 rounded-full animate-spin"></span>
+                <span>Loading summary...</span>
+              </div>
+            )}
+            {aiSummaryError && (
+              <p className="text-gray-500">AI summary unavailable</p>
+            )}
+            {!isLoadingAISummary && !aiSummaryError && aiSummary && (
+              <div className="space-y-3">
+                <div>
+                  <span className="font-medium text-gray-700">
+                    Core issue:{" "}
+                  </span>
+                  <span>{aiSummary.summary.core_issue}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">
+                    Current state:{" "}
+                  </span>
+                  <span>{aiSummary.summary.current_state}</span>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">
+                    Maintainers:{" "}
+                  </span>
+                  <span>
+                    {aiSummary.summary.involved_users.maintainers.length > 0
+                      ? aiSummary.summary.involved_users.maintainers.join(", ")
+                      : "None"}
+                  </span>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">
+                    Contributors:{" "}
+                  </span>
+                  <span>
+                    {aiSummary.summary.involved_users.contributors.length > 0
+                      ? aiSummary.summary.involved_users.contributors.join(", ")
+                      : "None"}
+                  </span>
+                </div>
+                <div>
+                  <span className="font-medium text-gray-700">
+                    Last meaningful update:{" "}
+                  </span>
+                  <span>
+                    {aiSummary.summary.last_meaningful_update_days_ago === 0
+                      ? "today"
+                      : aiSummary.summary.last_meaningful_update_days_ago === 1
+                        ? "1 day ago"
+                        : `${aiSummary.summary.last_meaningful_update_days_ago} days ago`}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      <div className="flex gap-3 items-center mt-4">
         <a
           href={githubUrl}
           target="_blank"
