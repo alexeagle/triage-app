@@ -92,7 +92,6 @@ export default async function RepoPage({ params }: RepoPageProps) {
                       login={maintainer.login}
                       avatarUrl={maintainer.avatar_url}
                       size="sm"
-                      showLink={true}
                       isMaintainer={true}
                       bio={maintainer.bio ?? null}
                       company={maintainer.company ?? null}

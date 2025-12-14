@@ -27,7 +27,7 @@ export default function GitHubUser({
   login,
   avatarUrl,
   size = "md",
-  showLink = false,
+  showLink = true,
   className = "",
   isMaintainer = false,
   bio,
