@@ -9,6 +9,9 @@ const inter = Inter({ subsets: ["latin"] });
 export const metadata: Metadata = {
   title: "Bazel Triage App",
   description: "Bazel issue and PR triage application",
+  icons: {
+    icon: "/logo.png",
+  },
 };
 
 export default function RootLayout({
