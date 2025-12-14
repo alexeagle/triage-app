@@ -38,8 +38,9 @@
     "run:syncIssueReactions": "tsx data/sync/syncIssueReactions.ts",
     "run:syncIssueComments": "tsx data/sync/syncIssueComments.ts",
     "run:syncRepoMaintainers": "tsx data/sync/syncRepoMaintainers.ts",
-    "run:backfillStarredRepos": "tsx data/manual-tests/backfillStarredRepos.ts",
-    "run:refreshUserItemInteractions": "tsx data/sync/refreshUserItemInteractions.ts"
+    "run:refreshUserItemInteractions": "tsx data/sync/refreshUserItemInteractions.ts",
+    "backfill:starredRepos": "tsx data/manual-tests/backfillStarredRepos.ts",
+    "backfill:githubUserProfiles": "tsx data/manual-tests/backfillGitHubUserProfiles.ts"
   },
   "type": "module",
   "dependencies": {

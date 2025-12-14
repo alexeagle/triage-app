@@ -12,7 +12,12 @@ CREATE TABLE github_users (
     first_seen TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     last_seen TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     is_maintainer BOOLEAN NOT NULL DEFAULT FALSE,
-    maintainer_sources JSONB NOT NULL DEFAULT '[]'::jsonb
+    maintainer_sources JSONB NOT NULL DEFAULT '[]'::jsonb,
+    bio TEXT,
+    company TEXT,
+    blog TEXT,
+    'location' TEXT,
+    twitter TEXT;
 );
 
 -- Index on login for fast lookups by username

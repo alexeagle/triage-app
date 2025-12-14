@@ -12,6 +12,7 @@ import {
   shouldSyncStars,
 } from "../data/db/repoStars";
 import { upsertGitHubUser } from "../data/db/githubUsers";
+import { enrichUserWithProfile } from "../data/github/userProfile";
 import { query } from "../data/db/index";
 
 interface SyncStarredReposResult {
@@ -59,14 +60,18 @@ export async function syncStarredRepos(
     // Fetch starred repos using user's access token
     const starredRepos = await fetchStarredRepos(username, accessToken);
 
-    // Upsert user into github_users if not present
-    await upsertGitHubUser({
-      github_id: userGithubId,
-      login: username,
-      avatar_url: null,
-      name: null,
-      type: "User",
-    });
+    // Upsert user into github_users with profile data
+    const enrichedUser = await enrichUserWithProfile(
+      {
+        github_id: userGithubId,
+        login: username,
+        avatar_url: null,
+        name: null,
+        type: "User",
+      },
+      accessToken,
+    );
+    await upsertGitHubUser(enrichedUser);
 
     // Get all existing repo IDs from the database
     const existingReposResult = await query<{ github_id: number }>(
