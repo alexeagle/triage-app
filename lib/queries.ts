@@ -37,6 +37,8 @@ export interface IssueRow {
   repo_full_name?: string; // Optional, populated when joined with repos table
   author_avatar_url?: string | null; // Optional, populated when joined with github_users table
   author_is_maintainer?: boolean | null; // Optional, populated when joined with github_users table
+  author_bio?: string | null; // Optional, populated when joined with github_users table
+  author_company?: string | null; // Optional, populated when joined with github_users table
 }
 
 export interface PullRequestRow {
@@ -65,6 +67,8 @@ export interface PullRequestRow {
   turn?: "maintainer" | "author" | null; // Optional, populated when joined with issue_turns
   author_avatar_url?: string | null; // Optional, populated when joined with github_users table
   author_is_maintainer?: boolean | null; // Optional, populated when joined with github_users table
+  author_bio?: string | null; // Optional, populated when joined with github_users table
+  author_company?: string | null; // Optional, populated when joined with github_users table
 }
 
 export interface RepoStatsRow {
@@ -90,6 +94,8 @@ export interface MaintainerRow {
   source: string;
   confidence: number;
   last_confirmed_at: string;
+  bio?: string | null; // Optional, populated when joined with github_users table
+  company?: string | null; // Optional, populated when joined with github_users table
 }
 
 /**
@@ -116,7 +122,9 @@ export async function getRepoIssues(repoGithubId: number): Promise<IssueRow[]> {
     `SELECT i.id, i.github_id, i.repo_github_id, i.number, i.title, i.body, i.state,
             i.created_at, i.updated_at, i.closed_at, i.labels, i.assignees, i.author_login, i.synced_at,
             gu.avatar_url as author_avatar_url,
-            gu.is_maintainer as author_is_maintainer
+            gu.is_maintainer as author_is_maintainer,
+            gu.bio as author_bio,
+            gu.company as author_company
      FROM issues i
      LEFT JOIN github_users gu ON i.author_login = gu.login
      WHERE i.repo_github_id = $1 AND i.state = 'open'
@@ -159,7 +167,9 @@ export async function getRepoPullRequests(
       pr.synced_at,
       it.turn,
       gu.avatar_url as author_avatar_url,
-      gu.is_maintainer as author_is_maintainer
+      gu.is_maintainer as author_is_maintainer,
+      gu.bio as author_bio,
+      gu.company as author_company
      FROM pull_requests pr
      LEFT JOIN issue_turns it ON pr.github_id = it.issue_github_id
      LEFT JOIN github_users gu ON pr.author_login = gu.login
@@ -300,7 +310,9 @@ export async function getRepoMaintainers(
       gu.avatar_url,
       rm.source,
       rm.confidence,
-      rm.last_confirmed_at
+      rm.last_confirmed_at,
+      gu.bio,
+      gu.company
      FROM repo_maintainers rm
      INNER JOIN github_users gu ON rm.github_user_id = gu.github_id
      WHERE rm.repo_github_id = $1
@@ -768,7 +780,9 @@ export async function getNonBotPullRequests(
       r.full_name as repo_full_name,
       it.turn,
       gu.avatar_url as author_avatar_url,
-      gu.is_maintainer as author_is_maintainer
+      gu.is_maintainer as author_is_maintainer,
+      gu.bio as author_bio,
+      gu.company as author_company
     FROM pull_requests pr
     INNER JOIN repos r ON pr.repo_github_id = r.github_id
     LEFT JOIN issue_turns it ON pr.github_id = it.issue_github_id

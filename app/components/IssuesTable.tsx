@@ -228,6 +228,8 @@ export default function IssuesTable({ issues }: IssuesTableProps) {
                     avatarUrl={i.author_avatar_url}
                     size="md"
                     isMaintainer={i.author_is_maintainer ?? false}
+                    bio={i.author_bio ?? null}
+                    company={i.author_company ?? null}
                   />
                 </td>
                 <td className="px-4 py-2 text-sm">

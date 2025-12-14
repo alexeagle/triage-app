@@ -290,6 +290,8 @@ export default function PullRequestsTable({
                     avatarUrl={pr.author_avatar_url}
                     size="md"
                     isMaintainer={pr.author_is_maintainer ?? false}
+                    bio={pr.author_bio ?? null}
+                    company={pr.author_company ?? null}
                   />
                 </td>
                 <td className="px-4 py-2 text-sm">

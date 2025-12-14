@@ -94,6 +94,8 @@ export default async function RepoPage({ params }: RepoPageProps) {
                       size="sm"
                       showLink={true}
                       isMaintainer={true}
+                      bio={maintainer.bio ?? null}
+                      company={maintainer.company ?? null}
                     />
                     <span className="text-gray-500 text-xs">
                       ({maintainer.source}, {maintainer.confidence}% confidence)
