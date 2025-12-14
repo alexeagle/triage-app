@@ -3,6 +3,10 @@
     "include": "*",
     "exclude": []
   },
+  "bazel-starters": {
+    "include": "*",
+    "exclude": []
+  },
   "aspect-build": {
     "include": "*",
     "exclude": []

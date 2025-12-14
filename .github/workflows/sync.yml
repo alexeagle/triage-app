@@ -14,6 +14,7 @@ jobs:
       matrix:
         org:
           - bazel-contrib
+          - bazel-starters
           - aspect-build
           - aspect-extensions
           - chainguard-dev
