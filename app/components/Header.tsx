@@ -2,6 +2,7 @@
 import { useState, useEffect, useTransition } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCircleNotch } from "@fortawesome/free-solid-svg-icons";
 import GitHubUser from "./GitHubUser";
@@ -78,8 +79,13 @@ export default function Header() {
   return (
     <header className="p-4 border-b border-gray-200 flex items-center justify-between">
       <div className="flex items-center gap-2">
-        <img src="/logo.png" alt="Triage App" className="w-8 h-8" />
-        <span className="font-semibold">Alex's Triage App</span>
+        <Link
+          href="/"
+          className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
+        >
+          <img src="/logo.png" alt="Triage App" className="w-8 h-8" />
+          <span className="font-semibold">Alex's Triage App</span>
+        </Link>
         <i className="hidden md:block text-sm text-gray-600 text-center">
           &ldquo;It's like{" "}
           <a
