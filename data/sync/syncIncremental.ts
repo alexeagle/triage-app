@@ -31,6 +31,7 @@ import {
 } from "../db/syncState.js";
 import { closePool } from "../db/index.js";
 import { upsertGitHubUser } from "../db/githubUsers.js";
+import { enrichCompanyDataForUserAsync } from "../db/enrichCompanyData.js";
 
 export interface IncrementalSyncResult {
   reposProcessed: number;
@@ -112,9 +113,10 @@ export async function syncIncremental(
                   github_id: issue.user.id,
                   login: issue.user.login,
                   avatar_url: issue.user.avatar_url,
-                  name: issue.user.name,
                   type: issue.user.type,
                 });
+                // Enrich with company data (fire-and-forget)
+                enrichCompanyDataForUserAsync(issue.user.login, issue.user.id);
               } catch (error) {
                 console.warn(
                   `  ⚠ Failed to upsert author ${issue.user.login}: ${error}`,
@@ -128,9 +130,10 @@ export async function syncIncremental(
                     github_id: assignee.id,
                     login: assignee.login,
                     avatar_url: assignee.avatar_url,
-                    name: assignee.name,
                     type: assignee.type,
                   });
+                  // Enrich with company data (fire-and-forget)
+                  enrichCompanyDataForUserAsync(assignee.login, assignee.id);
                 } catch (error) {
                   console.warn(
                     `  ⚠ Failed to upsert assignee ${assignee.login}: ${error}`,
@@ -208,6 +211,11 @@ export async function syncIncremental(
                     name: issue.user.name,
                     type: issue.user.type,
                   });
+                  // Enrich with company data (fire-and-forget)
+                  enrichCompanyDataForUserAsync(
+                    issue.user.login,
+                    issue.user.id,
+                  );
                 } catch (error) {
                   console.warn(
                     `  ⚠ Failed to upsert author ${issue.user.login}: ${error}`,
@@ -224,6 +232,8 @@ export async function syncIncremental(
                       name: assignee.name,
                       type: assignee.type,
                     });
+                    // Enrich with company data (fire-and-forget)
+                    enrichCompanyDataForUserAsync(assignee.login, assignee.id);
                   } catch (error) {
                     console.warn(
                       `  ⚠ Failed to upsert assignee ${assignee.login}: ${error}`,
@@ -326,9 +336,10 @@ export async function syncIncremental(
                     github_id: pr.author.id,
                     login: pr.author.login,
                     avatar_url: pr.author.avatar_url,
-                    name: pr.author.name,
                     type: pr.author.type,
                   });
+                  // Enrich with company data (fire-and-forget)
+                  enrichCompanyDataForUserAsync(pr.author.login, pr.author.id);
                 } catch (error) {
                   console.warn(
                     `  ⚠ Failed to upsert author ${pr.author.login}: ${error}`,
@@ -347,6 +358,8 @@ export async function syncIncremental(
                       name: assignee.name,
                       type: assignee.type,
                     });
+                    // Enrich with company data (fire-and-forget)
+                    enrichCompanyDataForUserAsync(assignee.login, assignee.id);
                   } catch (error) {
                     console.warn(
                       `  ⚠ Failed to upsert assignee ${assignee.login}: ${error}`,
@@ -362,9 +375,13 @@ export async function syncIncremental(
                     github_id: review.reviewer.id,
                     login: review.reviewer.login,
                     avatar_url: review.reviewer.avatar_url,
-                    name: review.reviewer.name,
                     type: review.reviewer.type,
                   });
+                  // Enrich with company data (fire-and-forget)
+                  enrichCompanyDataForUserAsync(
+                    review.reviewer.login,
+                    review.reviewer.id,
+                  );
                 } catch (error) {
                   console.warn(
                     `  ⚠ Failed to upsert reviewer ${review.reviewer.login}: ${error}`,

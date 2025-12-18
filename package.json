@@ -40,7 +40,8 @@
     "run:syncRepoMaintainers": "tsx data/sync/syncRepoMaintainers.ts",
     "run:refreshUserItemInteractions": "tsx data/sync/refreshUserItemInteractions.ts",
     "backfill:starredRepos": "tsx data/manual-tests/backfillStarredRepos.ts",
-    "backfill:githubUserProfiles": "tsx data/manual-tests/backfillGitHubUserProfiles.ts"
+    "backfill:githubUserProfiles": "tsx data/manual-tests/backfillGitHubUserProfiles.ts",
+    "backfill:commonroomCompany": "tsx data/manual-tests/backfillCommonRoomCompanyData.ts"
   },
   "type": "module",
   "dependencies": {

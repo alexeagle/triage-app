@@ -10,6 +10,7 @@ import { query } from "../db/index.js";
 import { closePool } from "../db/index.js";
 import { upsertMaintainer } from "../db/repoMaintainers.js";
 import { upsertGitHubUser, markMaintainer } from "../db/githubUsers.js";
+import { enrichCompanyDataForUserAsync } from "../db/enrichCompanyData.js";
 import { fetchRepoCollaborators } from "../github/collaborators.js";
 import { detectMaintainersFromFiles } from "../../sync/detectMaintainers.js";
 
@@ -148,9 +149,10 @@ export async function syncRepoMaintainers(): Promise<SyncMaintainersResult> {
                 github_id: maintainer.id,
                 login: maintainer.login,
                 avatar_url: maintainer.avatar_url,
-                name: null,
                 type: maintainer.type,
               });
+              // Enrich with company data (fire-and-forget)
+              enrichCompanyDataForUserAsync(maintainer.login, maintainer.id);
 
               // Determine permission level for source/confidence
               let permissionLevel = "write";

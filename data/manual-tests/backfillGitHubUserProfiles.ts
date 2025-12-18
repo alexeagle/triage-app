@@ -6,6 +6,7 @@
  */
 
 import { Pool } from "pg";
+import { normalizeCompanyName } from "../db/normalizeCompany.js";
 
 interface GitHubUserRow {
   github_id: number;
@@ -120,23 +121,28 @@ async function main() {
       try {
         const profile = await fetchGitHubUser(user.login, githubToken);
 
+        // Upsert into github_profiles table
         await pool.query(
-          `UPDATE github_users
-           SET name = $1,
-               bio = $2,
-               company = $3,
-               blog = $4,
-               location = $5,
-               twitter = $6
-           WHERE github_id = $7`,
+          `INSERT INTO github_profiles (
+            github_id, company, bio, blog, location, twitter, name, last_fetched_at
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+          ON CONFLICT (github_id)
+          DO UPDATE SET
+            company = EXCLUDED.company,
+            bio = EXCLUDED.bio,
+            blog = EXCLUDED.blog,
+            location = EXCLUDED.location,
+            twitter = EXCLUDED.twitter,
+            name = EXCLUDED.name,
+            last_fetched_at = NOW()`,
           [
-            profile.name,
+            user.github_id,
+            normalizeCompanyName(profile.company),
             profile.bio,
-            profile.company,
             profile.blog,
             profile.location,
             profile.twitter_username,
-            user.github_id,
+            profile.name,
           ],
         );
 

@@ -123,10 +123,16 @@ export async function getRepoIssues(repoGithubId: number): Promise<IssueRow[]> {
             i.created_at, i.updated_at, i.closed_at, i.labels, i.assignees, i.author_login, i.synced_at,
             gu.avatar_url as author_avatar_url,
             gu.is_maintainer as author_is_maintainer,
-            gu.bio as author_bio,
-            gu.company as author_company
+            ghm.bio as author_bio,
+            -- Use case-insensitive comparison to handle variations like "Google" vs "google"
+            COALESCE(
+              NULLIF(LOWER(TRIM(crmm.company_name)), ''),
+              NULLIF(LOWER(TRIM(ghm.company)), '')
+            ) as author_company
      FROM issues i
      LEFT JOIN github_users gu ON i.author_login = gu.login
+     LEFT JOIN github_profiles ghm ON gu.github_id = ghm.github_id
+     LEFT JOIN commonroom_member_metadata crmm ON gu.login = crmm.github_login
      WHERE i.repo_github_id = $1 AND i.state = 'open'
      ORDER BY i.updated_at DESC`,
     [repoGithubId],
@@ -168,11 +174,13 @@ export async function getRepoPullRequests(
       it.turn,
       gu.avatar_url as author_avatar_url,
       gu.is_maintainer as author_is_maintainer,
-      gu.bio as author_bio,
-      gu.company as author_company
+      ghm.bio as author_bio,
+      COALESCE(crmm.company_name, ghm.company) as author_company
      FROM pull_requests pr
      LEFT JOIN issue_turns it ON pr.github_id = it.issue_github_id
      LEFT JOIN github_users gu ON pr.author_login = gu.login
+     LEFT JOIN github_profiles ghm ON gu.github_id = ghm.github_id
+     LEFT JOIN commonroom_member_metadata crmm ON gu.login = crmm.github_login
      WHERE pr.repo_github_id = $1
      ORDER BY pr.updated_at DESC`,
     [repoGithubId],
@@ -311,10 +319,16 @@ export async function getRepoMaintainers(
       rm.source,
       rm.confidence,
       rm.last_confirmed_at,
-      gu.bio,
-      gu.company
+      ghm.bio as bio,
+      -- Use case-insensitive comparison to handle variations like "Google" vs "google"
+      COALESCE(
+        NULLIF(LOWER(TRIM(crmm.company_name)), ''),
+        NULLIF(LOWER(TRIM(ghm.company)), '')
+      ) as company
      FROM repo_maintainers rm
      INNER JOIN github_users gu ON rm.github_user_id = gu.github_id
+     LEFT JOIN github_profiles ghm ON gu.github_id = ghm.github_id
+     LEFT JOIN commonroom_member_metadata crmm ON gu.login = crmm.github_login
      WHERE rm.repo_github_id = $1
      ORDER BY rm.confidence DESC, rm.source ASC, gu.login ASC`,
     [repoGithubId],
@@ -781,12 +795,14 @@ export async function getNonBotPullRequests(
       it.turn,
       gu.avatar_url as author_avatar_url,
       gu.is_maintainer as author_is_maintainer,
-      gu.bio as author_bio,
-      gu.company as author_company
+      ghm.bio as author_bio,
+      COALESCE(crmm.company_name, ghm.company) as author_company
     FROM pull_requests pr
     INNER JOIN repos r ON pr.repo_github_id = r.github_id
     LEFT JOIN issue_turns it ON pr.github_id = it.issue_github_id
-    LEFT JOIN github_users gu ON pr.author_login = gu.login`;
+    LEFT JOIN github_users gu ON pr.author_login = gu.login
+    LEFT JOIN github_profiles ghm ON gu.github_id = ghm.github_id
+    LEFT JOIN commonroom_member_metadata crmm ON gu.login = crmm.github_login`;
 
   if (userGithubId) {
     sql += ` INNER JOIN repo_stars rs ON r.github_id = rs.repo_github_id

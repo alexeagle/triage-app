@@ -19,6 +19,7 @@ import { upsertPullRequest } from "../db/pullRequests.js";
 import { replacePullRequestReviews } from "../db/pullRequests.js";
 import { closePool } from "../db/index.js";
 import { upsertGitHubUser } from "../db/githubUsers.js";
+import { enrichCompanyDataForUserAsync } from "../db/enrichCompanyData.js";
 
 export interface PRSyncResult {
   reposProcessed: number;
@@ -124,9 +125,10 @@ export async function syncAllPullRequests(
                     github_id: pr.author.id,
                     login: pr.author.login,
                     avatar_url: pr.author.avatar_url,
-                    name: pr.author.name,
                     type: pr.author.type,
                   });
+                  // Enrich with company data (fire-and-forget)
+                  enrichCompanyDataForUserAsync(pr.author.login, pr.author.id);
                 } catch (error) {
                   // Log but don't fail the PR sync if user upsert fails
                   const errorMessage =
@@ -145,9 +147,10 @@ export async function syncAllPullRequests(
                       github_id: assignee.id,
                       login: assignee.login,
                       avatar_url: assignee.avatar_url,
-                      name: assignee.name,
                       type: assignee.type,
                     });
+                    // Enrich with company data (fire-and-forget)
+                    enrichCompanyDataForUserAsync(assignee.login, assignee.id);
                   } catch (error) {
                     // Log but don't fail the PR sync if user upsert fails
                     const errorMessage =
@@ -166,9 +169,13 @@ export async function syncAllPullRequests(
                     github_id: review.reviewer.id,
                     login: review.reviewer.login,
                     avatar_url: review.reviewer.avatar_url,
-                    name: review.reviewer.name,
                     type: review.reviewer.type,
                   });
+                  // Enrich with company data (fire-and-forget)
+                  enrichCompanyDataForUserAsync(
+                    review.reviewer.login,
+                    review.reviewer.id,
+                  );
                 } catch (error) {
                   // Log but don't fail the PR sync if user upsert fails
                   const errorMessage =

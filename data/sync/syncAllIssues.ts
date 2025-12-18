@@ -12,6 +12,7 @@ import { upsertRepo } from "../db/repos.js";
 import { upsertIssue } from "../db/issues.js";
 import { closePool } from "../db/index.js";
 import { upsertGitHubUser } from "../db/githubUsers.js";
+import { enrichCompanyDataForUserAsync } from "../db/enrichCompanyData.js";
 
 export interface SyncResult {
   reposProcessed: number;
@@ -78,9 +79,10 @@ export async function syncAllIssues(orgOrUser: string): Promise<SyncResult> {
                   github_id: issue.user.id,
                   login: issue.user.login,
                   avatar_url: issue.user.avatar_url,
-                  name: issue.user.name,
                   type: issue.user.type,
                 });
+                // Enrich with company data (fire-and-forget)
+                enrichCompanyDataForUserAsync(issue.user.login, issue.user.id);
               } catch (error) {
                 // Log but don't fail the issue sync if user upsert fails
                 const errorMessage =
@@ -97,9 +99,10 @@ export async function syncAllIssues(orgOrUser: string): Promise<SyncResult> {
                     github_id: assignee.id,
                     login: assignee.login,
                     avatar_url: assignee.avatar_url,
-                    name: assignee.name,
                     type: assignee.type,
                   });
+                  // Enrich with company data (fire-and-forget)
+                  enrichCompanyDataForUserAsync(assignee.login, assignee.id);
                 } catch (error) {
                   // Log but don't fail the issue sync if user upsert fails
                   const errorMessage =
