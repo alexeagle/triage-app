@@ -33,9 +33,10 @@ export async function syncIssueComments(): Promise<number> {
   let totalCommentsSynced = 0;
 
   try {
-    // Fetch open issues that need comment syncing:
-    // - Issues with no comments yet, OR
-    // - Issues that have been updated since the last comment was synced
+    // Fetch open issues and PRs that need comment syncing:
+    // - Items with no comments yet, OR
+    // - Items that have been updated since the last comment was synced
+    // Note: GitHub treats PRs as issues for comments, so we sync both
     const issues = await query<IssueWithRepo>(
       `SELECT 
         i.github_id,
@@ -57,11 +58,33 @@ export async function syncIssueComments(): Promise<number> {
           ic.issue_github_id IS NULL  -- No comments synced yet
           OR i.updated_at > ic.last_comment_sync  -- Issue updated since last comment sync
         )
-      ORDER BY i.github_id`,
+      UNION ALL
+      SELECT 
+        pr.github_id,
+        pr.number,
+        r.full_name as repo_full_name,
+        SPLIT_PART(r.full_name, '/', 1) as owner_login,
+        SPLIT_PART(r.full_name, '/', 2) as repo_name
+      FROM pull_requests pr
+      INNER JOIN repos r ON pr.repo_github_id = r.github_id
+      LEFT JOIN (
+        SELECT 
+          issue_github_id,
+          MAX(synced_at) as last_comment_sync
+        FROM issue_comments
+        GROUP BY issue_github_id
+      ) ic ON pr.github_id = ic.issue_github_id
+      WHERE pr.state = 'open'
+        AND pr.draft = false
+        AND (
+          ic.issue_github_id IS NULL  -- No comments synced yet
+          OR pr.updated_at > ic.last_comment_sync  -- PR updated since last comment sync
+        )
+      ORDER BY github_id`,
     );
 
     console.log(
-      `📋 Found ${issues.rows.length} open issues to sync comments for\n`,
+      `📋 Found ${issues.rows.length} open issues/PRs to sync comments for\n`,
     );
 
     // Process each issue
@@ -109,7 +132,7 @@ export async function syncIssueComments(): Promise<number> {
 
         if (issueCommentsCount > 0) {
           console.log(
-            `[${issueNum}/${issues.rows.length}] Issue #${issue.number} (${issue.repo_full_name}): ${issueCommentsCount} comments synced`,
+            `[${issueNum}/${issues.rows.length}] #${issue.number} (${issue.repo_full_name}): ${issueCommentsCount} comments synced`,
           );
         }
       } catch (error) {

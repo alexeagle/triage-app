@@ -4,10 +4,14 @@
 -- Stores comments on issues (and PRs via the issues endpoint).
 
 -- Issue Comments table
--- Stores all comments on issues from all repositories
+-- Stores all comments on issues and PRs from all repositories
+-- Note: issue_github_id can reference either issues(github_id) or pull_requests(github_id)
+-- Since PostgreSQL doesn't support foreign keys to multiple tables, we rely on
+-- application-level validation. The sync process ensures comments are only created
+-- for valid issues/PRs.
 CREATE TABLE issue_comments (
     id SERIAL PRIMARY KEY,
-    issue_github_id BIGINT NOT NULL REFERENCES issues(github_id) ON DELETE CASCADE,
+    issue_github_id BIGINT NOT NULL,  -- References either issues(github_id) or pull_requests(github_id)
     comment_github_id BIGINT NOT NULL UNIQUE,
     author_login TEXT NOT NULL,
     body TEXT,
