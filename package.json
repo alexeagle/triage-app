@@ -41,7 +41,8 @@
     "run:refreshUserItemInteractions": "tsx data/sync/refreshUserItemInteractions.ts",
     "backfill:starredRepos": "tsx data/manual-tests/backfillStarredRepos.ts",
     "backfill:githubUserProfiles": "tsx data/manual-tests/backfillGitHubUserProfiles.ts",
-    "backfill:commonroomCompany": "tsx data/manual-tests/backfillCommonRoomCompanyData.ts"
+    "backfill:commonroomCompany": "tsx data/manual-tests/backfillCommonRoomCompanyData.ts",
+    "backfill:hubspotCompanies": "tsx data/manual-tests/backfillHubSpotCompanies.ts"
   },
   "type": "module",
   "dependencies": {
