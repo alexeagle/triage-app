@@ -64,6 +64,7 @@ export interface IssueRow {
   author_login: string;
   synced_at: string;
   repo_full_name?: string; // Optional, populated when joined with repos table
+  author_github_id?: number | null; // Optional, populated when joined with github_users table
   author_avatar_url?: string | null; // Optional, populated when joined with github_users table
   author_is_maintainer?: boolean | null; // Optional, populated when joined with github_users table
   author_bio?: string | null; // Optional, populated when joined with github_users table
@@ -95,6 +96,7 @@ export interface PullRequestRow {
   synced_at: string;
   repo_full_name?: string; // Optional, populated when joined with repos table
   turn?: "maintainer" | "author" | null; // Optional, populated when joined with issue_turns
+  author_github_id?: number | null; // Optional, populated when joined with github_users table
   author_avatar_url?: string | null; // Optional, populated when joined with github_users table
   author_is_maintainer?: boolean | null; // Optional, populated when joined with github_users table
   author_bio?: string | null; // Optional, populated when joined with github_users table
@@ -153,18 +155,25 @@ export async function getRepoIssues(repoGithubId: number): Promise<IssueRow[]> {
   const issues = await query<IssueRow>(
     `SELECT i.id, i.github_id, i.repo_github_id, i.number, i.title, i.body, i.state,
             i.created_at, i.updated_at, i.closed_at, i.labels, i.assignees, i.author_login, i.synced_at,
+            gu.github_id as author_github_id,
             gu.avatar_url as author_avatar_url,
             gu.is_maintainer as author_is_maintainer,
             ghm.bio as author_bio,
-            -- Use case-insensitive comparison to handle variations like "Google" vs "google"
-            COALESCE(
-              NULLIF(LOWER(TRIM(crmm.company_name)), ''),
-              NULLIF(LOWER(TRIM(ghm.company)), '')
-            ) as author_company
+            -- Effective company name with override support
+            CASE
+              WHEN co.override_company_name IS NOT NULL THEN co.override_company_name
+              WHEN co.override_source = 'github' THEN ghm.company
+              WHEN co.override_source = 'commonroom' THEN crmm.company_name
+              ELSE COALESCE(
+                NULLIF(LOWER(TRIM(crmm.company_name)), ''),
+                NULLIF(LOWER(TRIM(ghm.company)), '')
+              )
+            END as author_company
      FROM issues i
      LEFT JOIN github_users gu ON i.author_login = gu.login
      LEFT JOIN github_profiles ghm ON gu.github_id = ghm.github_id
      LEFT JOIN commonroom_member_metadata crmm ON gu.login = crmm.github_login
+     LEFT JOIN company_overrides co ON gu.github_id = co.github_user_id
      WHERE i.repo_github_id = $1 AND i.state = 'open'
      ORDER BY i.updated_at DESC`,
     [repoGithubId],
@@ -214,15 +223,23 @@ export async function getRepoPullRequests(
       pr.closed_at, 
       pr.synced_at,
       it.turn,
+      gu.github_id as author_github_id,
       gu.avatar_url as author_avatar_url,
       gu.is_maintainer as author_is_maintainer,
       ghm.bio as author_bio,
-      COALESCE(crmm.company_name, ghm.company) as author_company
+      -- Effective company name with override support
+      CASE
+        WHEN co.override_company_name IS NOT NULL THEN co.override_company_name
+        WHEN co.override_source = 'github' THEN ghm.company
+        WHEN co.override_source = 'commonroom' THEN crmm.company_name
+        ELSE COALESCE(crmm.company_name, ghm.company)
+      END as author_company
      FROM pull_requests pr
      LEFT JOIN issue_turns it ON pr.github_id = it.issue_github_id
      LEFT JOIN github_users gu ON pr.author_login = gu.login
      LEFT JOIN github_profiles ghm ON gu.github_id = ghm.github_id
      LEFT JOIN commonroom_member_metadata crmm ON gu.login = crmm.github_login
+     LEFT JOIN company_overrides co ON gu.github_id = co.github_user_id
      WHERE pr.repo_github_id = $1
      ORDER BY pr.updated_at DESC`,
     [repoGithubId],
@@ -372,15 +389,21 @@ export async function getRepoMaintainers(
       rm.confidence,
       rm.last_confirmed_at,
       ghm.bio as bio,
-      -- Use case-insensitive comparison to handle variations like "Google" vs "google"
-      COALESCE(
-        NULLIF(LOWER(TRIM(crmm.company_name)), ''),
-        NULLIF(LOWER(TRIM(ghm.company)), '')
-      ) as company
+      -- Effective company name with override support
+      CASE
+        WHEN co.override_company_name IS NOT NULL THEN co.override_company_name
+        WHEN co.override_source = 'github' THEN ghm.company
+        WHEN co.override_source = 'commonroom' THEN crmm.company_name
+        ELSE COALESCE(
+          NULLIF(LOWER(TRIM(crmm.company_name)), ''),
+          NULLIF(LOWER(TRIM(ghm.company)), '')
+        )
+      END as company
      FROM repo_maintainers rm
      INNER JOIN github_users gu ON rm.github_user_id = gu.github_id
      LEFT JOIN github_profiles ghm ON gu.github_id = ghm.github_id
      LEFT JOIN commonroom_member_metadata crmm ON gu.login = crmm.github_login
+     LEFT JOIN company_overrides co ON gu.github_id = co.github_user_id
      WHERE rm.repo_github_id = $1
      ORDER BY rm.confidence DESC, rm.source ASC, gu.login ASC`,
     [repoGithubId],
@@ -855,16 +878,24 @@ export async function getNonBotPullRequests(
       pr.synced_at,
       r.full_name as repo_full_name,
       it.turn,
+      gu.github_id as author_github_id,
       gu.avatar_url as author_avatar_url,
       gu.is_maintainer as author_is_maintainer,
       ghm.bio as author_bio,
-      COALESCE(crmm.company_name, ghm.company) as author_company
+      -- Effective company name with override support
+      CASE
+        WHEN co.override_company_name IS NOT NULL THEN co.override_company_name
+        WHEN co.override_source = 'github' THEN ghm.company
+        WHEN co.override_source = 'commonroom' THEN crmm.company_name
+        ELSE COALESCE(crmm.company_name, ghm.company)
+      END as author_company
     FROM pull_requests pr
     INNER JOIN repos r ON pr.repo_github_id = r.github_id
     LEFT JOIN issue_turns it ON pr.github_id = it.issue_github_id
     LEFT JOIN github_users gu ON pr.author_login = gu.login
     LEFT JOIN github_profiles ghm ON gu.github_id = ghm.github_id
-    LEFT JOIN commonroom_member_metadata crmm ON gu.login = crmm.github_login`;
+    LEFT JOIN commonroom_member_metadata crmm ON gu.login = crmm.github_login
+    LEFT JOIN company_overrides co ON gu.github_id = co.github_user_id`;
 
   if (userGithubId) {
     sql += ` INNER JOIN repo_stars rs ON r.github_id = rs.repo_github_id

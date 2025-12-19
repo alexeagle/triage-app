@@ -234,6 +234,7 @@ export default function IssuesTable({ issues }: IssuesTableProps) {
                     companyClassification={
                       i.author_company_classification as CompanyClassification | null
                     }
+                    githubUserId={i.author_github_id ?? null}
                   />
                 </td>
                 <td className="px-4 py-2 text-sm">

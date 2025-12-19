@@ -33,9 +33,9 @@ jobs:
           node-version: '20'
           cache: 'pnpm'
       - run: pnpm install --frozen-lockfile
-      - run: pnpm run:syncIncremental
-      - run: pnpm run:syncIssueReactions
-      - run: pnpm run:refreshUserItemInteractions
+      - run: pnpm tsx data/sync/syncIncremental.ts
+      - run: pnpm tsx data/sync/syncIssueReactions.ts
+      - run: pnpm tsx data/sync/refreshUserItemInteractions.ts
       - name: Notify on failure
         if: failure()
         uses: actions/github-script@v7

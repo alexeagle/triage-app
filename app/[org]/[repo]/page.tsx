@@ -98,6 +98,7 @@ export default async function RepoPage({ params }: RepoPageProps) {
                       companyClassification={
                         maintainer.company_classification as CompanyClassification | null
                       }
+                      githubUserId={maintainer.github_user_id}
                     />
                     <span className="text-gray-500 text-xs">
                       ({maintainer.source}, {maintainer.confidence}% confidence)

@@ -1,11 +1,16 @@
+"use client";
+
+import { useState } from "react";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import {
   faUser,
   faInfoCircle,
   faBuilding,
+  faEdit,
 } from "@fortawesome/free-solid-svg-icons";
 import Link from "next/link";
 import { CompanyClassification } from "@/lib/companyClassificationTypes";
+import CompanyOverrideDialog from "./CompanyOverrideDialog";
 
 interface GitHubUserProps {
   login: string;
@@ -17,6 +22,7 @@ interface GitHubUserProps {
   bio?: string | null;
   company?: string | null;
   companyClassification?: CompanyClassification | null;
+  githubUserId?: number | null;
 }
 
 const sizeClasses = {
@@ -35,6 +41,7 @@ export default function GitHubUser({
   bio,
   company,
   companyClassification,
+  githubUserId,
 }: GitHubUserProps) {
   const avatarSize = sizeClasses[size];
   const iconSize =
@@ -48,6 +55,8 @@ export default function GitHubUser({
     <FontAwesomeIcon icon={faUser} className={`${iconSize} text-gray-400`} />
   );
 
+  const [showOverrideDialog, setShowOverrideDialog] = useState(false);
+
   const hasBio = bio && bio.trim().length > 0;
   const hasCompany = company && company.trim().length > 0;
   const isAspectBuild = company?.toLowerCase() === "aspect build";
@@ -59,6 +68,11 @@ export default function GitHubUser({
 
   // Show info circle only if there's no company badge but we have bio or company info
   const showInfoCircle = !hasCompanyBadge && (hasBio || hasCompany);
+
+  const handleOverrideSave = () => {
+    // Refresh the page to show updated company
+    window.location.reload();
+  };
 
   const renderTooltip = () => (
     <div className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 w-64 p-2 bg-gray-900 text-white text-xs rounded-lg shadow-xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 pointer-events-none">
@@ -128,13 +142,37 @@ export default function GitHubUser({
           {renderTooltip()}
         </div>
       )}
+      {githubUserId && (hasCompany || hasBio) && (
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            setShowOverrideDialog(true);
+          }}
+          className="opacity-0 group-hover:opacity-100 transition-opacity"
+          title="Change company attribution"
+        >
+          <FontAwesomeIcon
+            icon={faEdit}
+            className={`${bioIconSize} text-gray-400 hover:text-gray-600`}
+          />
+        </button>
+      )}
     </div>
   );
 
   const content = (
-    <div className={`flex items-center gap-2 ${className}`}>
+    <div className={`flex items-center gap-2 group ${className}`}>
       {avatarElement}
       {loginElement}
+      {showOverrideDialog && githubUserId && (
+        <CompanyOverrideDialog
+          githubUserId={githubUserId}
+          currentCompany={company ?? null}
+          onClose={() => setShowOverrideDialog(false)}
+          onSave={handleOverrideSave}
+        />
+      )}
     </div>
   );
 

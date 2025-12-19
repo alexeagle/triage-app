@@ -296,6 +296,7 @@ export default function PullRequestsTable({
                     companyClassification={
                       pr.author_company_classification as CompanyClassification | null
                     }
+                    githubUserId={pr.author_github_id ?? null}
                   />
                 </td>
                 <td className="px-4 py-2 text-sm">
