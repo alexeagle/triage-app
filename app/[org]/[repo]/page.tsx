@@ -7,12 +7,12 @@ import {
   getRepoIssues,
   getRepoPullRequests,
   getRepoMaintainers,
-  IssueRow,
   MaintainerRow,
 } from "../../../lib/queries";
 import IssuesTable from "../../components/IssuesTable";
 import PullRequestsTable from "../../components/PullRequestsTable";
 import GitHubUser from "../../components/GitHubUser";
+import { CompanyClassification } from "../../../lib/companyClassificationTypes";
 
 interface RepoPageProps {
   params: {
@@ -95,6 +95,9 @@ export default async function RepoPage({ params }: RepoPageProps) {
                       isMaintainer={true}
                       bio={maintainer.bio ?? null}
                       company={maintainer.company ?? null}
+                      companyClassification={
+                        maintainer.company_classification as CompanyClassification | null
+                      }
                     />
                     <span className="text-gray-500 text-xs">
                       ({maintainer.source}, {maintainer.confidence}% confidence)
@@ -125,12 +128,10 @@ export default async function RepoPage({ params }: RepoPageProps) {
           <p className="text-gray-600 text-sm">No issues found.</p>
         ) : (
           <IssuesTable
-            issues={issues.map(
-              (issue: IssueRow): IssueRow => ({
-                ...issue,
-                repo_full_name: repo.full_name,
-              }),
-            )}
+            issues={issues.map((issue) => ({
+              ...issue,
+              repo_full_name: repo.full_name,
+            }))}
           />
         )}
       </section>

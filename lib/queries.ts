@@ -6,6 +6,35 @@
  */
 
 import { query } from "./db";
+import { getCompanyClassifications } from "./companyClassification";
+import { CompanyClassification } from "./companyClassificationTypes";
+
+/**
+ * Helper function to add company classification to an array of items.
+ *
+ * @param items - Array of items to enrich
+ * @param getCompanyName - Function to extract company name from an item
+ * @param setClassification - Function to set classification on an item
+ * @returns Array of items with classification added
+ */
+async function addCompanyClassification<T>(
+  items: T[],
+  getCompanyName: (item: T) => string | null | undefined,
+  setClassification: (item: T, classification: string | null) => T,
+): Promise<T[]> {
+  const companyNames = items
+    .map(getCompanyName)
+    .filter((c): c is string => c != null);
+  const classifications = await getCompanyClassifications(companyNames);
+
+  return items.map((item) => {
+    const companyName = getCompanyName(item);
+    const classification = companyName
+      ? (classifications.get(companyName)?.toString() ?? null)
+      : null;
+    return setClassification(item, classification);
+  });
+}
 
 export interface RepoRow {
   id: number;
@@ -39,6 +68,7 @@ export interface IssueRow {
   author_is_maintainer?: boolean | null; // Optional, populated when joined with github_users table
   author_bio?: string | null; // Optional, populated when joined with github_users table
   author_company?: string | null; // Optional, populated when joined with github_users table
+  author_company_classification?: string | null; // Optional, computed classification
 }
 
 export interface PullRequestRow {
@@ -69,6 +99,7 @@ export interface PullRequestRow {
   author_is_maintainer?: boolean | null; // Optional, populated when joined with github_users table
   author_bio?: string | null; // Optional, populated when joined with github_users table
   author_company?: string | null; // Optional, populated when joined with github_users table
+  author_company_classification?: string | null; // Optional, computed classification
 }
 
 export interface RepoStatsRow {
@@ -96,6 +127,7 @@ export interface MaintainerRow {
   last_confirmed_at: string;
   bio?: string | null; // Optional, populated when joined with github_users table
   company?: string | null; // Optional, populated when joined with github_users table
+  company_classification?: string | null; // Optional, computed classification
 }
 
 /**
@@ -118,7 +150,7 @@ export async function getRepos(): Promise<RepoRow[]> {
  * @returns Array of open issue rows
  */
 export async function getRepoIssues(repoGithubId: number): Promise<IssueRow[]> {
-  return query<IssueRow>(
+  const issues = await query<IssueRow>(
     `SELECT i.id, i.github_id, i.repo_github_id, i.number, i.title, i.body, i.state,
             i.created_at, i.updated_at, i.closed_at, i.labels, i.assignees, i.author_login, i.synced_at,
             gu.avatar_url as author_avatar_url,
@@ -137,6 +169,16 @@ export async function getRepoIssues(repoGithubId: number): Promise<IssueRow[]> {
      ORDER BY i.updated_at DESC`,
     [repoGithubId],
   );
+
+  // Add company classification
+  return addCompanyClassification(
+    issues,
+    (issue) => issue.author_company,
+    (issue, classification) => ({
+      ...issue,
+      author_company_classification: classification,
+    }),
+  );
 }
 
 /**
@@ -148,7 +190,7 @@ export async function getRepoIssues(repoGithubId: number): Promise<IssueRow[]> {
 export async function getRepoPullRequests(
   repoGithubId: number,
 ): Promise<PullRequestRow[]> {
-  return query<PullRequestRow>(
+  const prs = await query<PullRequestRow>(
     `SELECT 
       pr.id, 
       pr.github_id, 
@@ -184,6 +226,16 @@ export async function getRepoPullRequests(
      WHERE pr.repo_github_id = $1
      ORDER BY pr.updated_at DESC`,
     [repoGithubId],
+  );
+
+  // Add company classification
+  return addCompanyClassification(
+    prs,
+    (pr) => pr.author_company,
+    (pr, classification) => ({
+      ...pr,
+      author_company_classification: classification,
+    }),
   );
 }
 
@@ -311,7 +363,7 @@ export async function getReposByOrg(
 export async function getRepoMaintainers(
   repoGithubId: number,
 ): Promise<MaintainerRow[]> {
-  return query<MaintainerRow>(
+  const maintainers = await query<MaintainerRow>(
     `SELECT 
       rm.github_user_id,
       gu.login,
@@ -332,6 +384,16 @@ export async function getRepoMaintainers(
      WHERE rm.repo_github_id = $1
      ORDER BY rm.confidence DESC, rm.source ASC, gu.login ASC`,
     [repoGithubId],
+  );
+
+  // Add company classification
+  return addCompanyClassification(
+    maintainers,
+    (m) => m.company,
+    (maintainer, classification) => ({
+      ...maintainer,
+      company_classification: classification,
+    }),
   );
 }
 
@@ -814,7 +876,20 @@ export async function getNonBotPullRequests(
 
   sql += ` ORDER BY pr.updated_at DESC`;
 
-  return query<PullRequestRow>(sql, userGithubId ? [userGithubId] : []);
+  const prs = await query<PullRequestRow>(
+    sql,
+    userGithubId ? [userGithubId] : [],
+  );
+
+  // Add company classification
+  return addCompanyClassification(
+    prs,
+    (pr) => pr.author_company,
+    (pr, classification) => ({
+      ...pr,
+      author_company_classification: classification,
+    }),
+  );
 }
 
 export interface NextWorkItemRow {

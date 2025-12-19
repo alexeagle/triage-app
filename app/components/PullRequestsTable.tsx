@@ -7,6 +7,7 @@ import Link from "next/link";
 import { PullRequestRow } from "@/lib/queries";
 import TimeAgo from "./TimeAgo";
 import GitHubUser from "./GitHubUser";
+import { CompanyClassification } from "@/lib/companyClassificationTypes";
 
 interface PullRequestsTableProps {
   pullRequests: PullRequestRow[];
@@ -292,6 +293,9 @@ export default function PullRequestsTable({
                     isMaintainer={pr.author_is_maintainer ?? false}
                     bio={pr.author_bio ?? null}
                     company={pr.author_company ?? null}
+                    companyClassification={
+                      pr.author_company_classification as CompanyClassification | null
+                    }
                   />
                 </td>
                 <td className="px-4 py-2 text-sm">

@@ -208,7 +208,6 @@ export async function syncIncremental(
                     github_id: issue.user.id,
                     login: issue.user.login,
                     avatar_url: issue.user.avatar_url,
-                    name: issue.user.name,
                     type: issue.user.type,
                   });
                   // Enrich with company data (fire-and-forget)
@@ -229,7 +228,6 @@ export async function syncIncremental(
                       github_id: assignee.id,
                       login: assignee.login,
                       avatar_url: assignee.avatar_url,
-                      name: assignee.name,
                       type: assignee.type,
                     });
                     // Enrich with company data (fire-and-forget)
@@ -355,7 +353,6 @@ export async function syncIncremental(
                       github_id: assignee.id,
                       login: assignee.login,
                       avatar_url: assignee.avatar_url,
-                      name: assignee.name,
                       type: assignee.type,
                     });
                     // Enrich with company data (fire-and-forget)

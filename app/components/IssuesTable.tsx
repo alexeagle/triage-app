@@ -7,6 +7,7 @@ import Link from "next/link";
 import { IssueRow } from "@/lib/queries";
 import TimeAgo from "./TimeAgo";
 import GitHubUser from "./GitHubUser";
+import { CompanyClassification } from "@/lib/companyClassificationTypes";
 
 interface IssuesTableProps {
   issues: IssueRow[];
@@ -230,6 +231,9 @@ export default function IssuesTable({ issues }: IssuesTableProps) {
                     isMaintainer={i.author_is_maintainer ?? false}
                     bio={i.author_bio ?? null}
                     company={i.author_company ?? null}
+                    companyClassification={
+                      i.author_company_classification as CompanyClassification | null
+                    }
                   />
                 </td>
                 <td className="px-4 py-2 text-sm">
