@@ -308,6 +308,21 @@ export async function getOrgs(userGithubId?: number | null): Promise<string[]> {
     sql,
     userGithubId ? [userGithubId] : [],
   );
+
+  // Debug logging (can be removed later)
+  if (userGithubId && result.length === 0) {
+    console.log(
+      `[getOrgs] No orgs found for user ${userGithubId} with starred filter. Checking if stars exist...`,
+    );
+    const starCheck = await query<{ count: number }>(
+      `SELECT COUNT(*)::int as count FROM repo_stars WHERE user_github_id = $1`,
+      [userGithubId],
+    );
+    console.log(
+      `[getOrgs] User ${userGithubId} has ${starCheck[0]?.count || 0} stars in repo_stars table`,
+    );
+  }
+
   return result.map((row) => row.org);
 }
 

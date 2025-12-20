@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidatePath } from "next/cache";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../../lib/authConfig";
 import { query } from "../../../../lib/db";
@@ -60,6 +61,9 @@ export async function PATCH(request: NextRequest) {
        WHERE github_id = $2`,
       [starred_only, user.github_id],
     );
+
+    // Revalidate all paths to ensure layout and pages re-fetch with new filter
+    revalidatePath("/", "layout");
 
     return NextResponse.json({
       starred_only,

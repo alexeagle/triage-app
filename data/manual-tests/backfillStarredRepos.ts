@@ -33,7 +33,7 @@ async function main() {
   console.log("🔄 Backfilling starred repositories for existing users...\n");
 
   // Check for GitHub token
-  const githubToken = process.env.GITHUB_TOKEN || process.env.GITHUB_PAT;
+  const githubToken = process.env.GITHUB_PAT || process.env.GITHUB_TOKEN;
   if (!githubToken) {
     console.error(
       "❌ Missing GITHUB_TOKEN or GITHUB_PAT environment variable.\n" +
