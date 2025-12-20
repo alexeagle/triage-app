@@ -122,6 +122,11 @@ export default function LeftNav({
             label: "Prospect Activity",
             icon: faUserTie,
           },
+          {
+            href: "/customers",
+            label: "Customer Activity",
+            icon: faUserTie,
+          },
         ]
       : []),
   ];

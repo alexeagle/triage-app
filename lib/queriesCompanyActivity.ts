@@ -192,3 +192,13 @@ export async function getCompanyActivity(
 export async function getProspectActivity(): Promise<CompanyActivitySummary[]> {
   return getCompanyActivity("prospect_activity");
 }
+
+/**
+ * Convenience function to get customer activity.
+ * Equivalent to getCompanyActivity('customer_activity').
+ *
+ * @returns Array of customer company activity summaries
+ */
+export async function getCustomerActivity(): Promise<CompanyActivitySummary[]> {
+  return getCompanyActivity("customer_activity");
+}

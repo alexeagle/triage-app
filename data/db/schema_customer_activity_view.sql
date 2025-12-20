@@ -1,15 +1,15 @@
--- Prospect Activity View
+-- Customer Activity View
 -- 
--- Filtered view on top of company_activity_base for prospect companies only.
--- Prospects are companies with lifecycle stage: lead, marketingqualifiedlead, salesqualifiedlead, or opportunity
+-- Filtered view on top of company_activity_base for customer companies only.
+-- Customers are companies with lifecycle stage: customer
 
 -- This view depends on company_activity_base, which should be created first
 -- by running schema_company_activity_base_view.sql
 
 -- Drop the view first to avoid column order conflicts
-DROP VIEW IF EXISTS prospect_activity;
+DROP VIEW IF EXISTS customer_activity;
 
-CREATE VIEW prospect_activity AS
+CREATE VIEW customer_activity AS
 SELECT 
   hubspot_company_id,
   company_name,
@@ -27,4 +27,4 @@ SELECT
   interaction_type,
   interaction_date
 FROM company_activity_base
-WHERE lifecyclestage IN ('lead', 'marketingqualifiedlead', 'salesqualifiedlead', 'opportunity');
+WHERE lifecyclestage = 'customer';
