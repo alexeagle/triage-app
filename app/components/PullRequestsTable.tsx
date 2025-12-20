@@ -37,10 +37,11 @@ export default function PullRequestsTable({
     "all" | "day" | "week" | "month" | "year"
   >(defaultTimeFilter);
   const [turnFilter, setTurnFilter] = useState<"all" | "maintainer" | "author">(
-    "maintainer",
+    "all",
   );
+  // Default to "all" if no maintainer repo IDs provided (e.g., on single repo page)
   const [repoFilter, setRepoFilter] = useState<"all" | "I'm a maintainer">(
-    "I'm a maintainer",
+    maintainerRepoIds.length > 0 ? "I'm a maintainer" : "all",
   );
 
   // Filter pull requests
