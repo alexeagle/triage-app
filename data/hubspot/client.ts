@@ -122,3 +122,4 @@ export class HubSpotAPI {
     return data.results || [];
   }
 }
+

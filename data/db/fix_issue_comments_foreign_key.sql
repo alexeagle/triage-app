@@ -14,3 +14,4 @@ ALTER TABLE issue_comments
 -- we rely on application-level validation since the sync process ensures
 -- comments are only created for valid issues/PRs.
 
+

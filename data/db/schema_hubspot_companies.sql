@@ -23,3 +23,4 @@ CREATE INDEX IF NOT EXISTS idx_hubspot_companies_domain ON hubspot_companies(dom
 
 -- Index on name for lookups
 CREATE INDEX IF NOT EXISTS idx_hubspot_companies_name ON hubspot_companies(name);
+
