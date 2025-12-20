@@ -12,6 +12,7 @@ export interface CompanyActivityRow {
   company_name: string;
   user_github_id: number;
   user_login: string;
+  is_maintainer: boolean | null;
   item_github_id: number;
   repo_github_id: number;
   item_number: number;
@@ -30,6 +31,7 @@ export interface CompanyActivitySummary {
   users: Array<{
     user_login: string;
     user_github_id: number;
+    is_maintainer: boolean | null;
     interaction_count: number;
   }>;
   repositories: Array<{
@@ -55,6 +57,7 @@ export async function getCompanyActivity(
       company_name,
       user_github_id,
       user_login,
+      is_maintainer,
       item_github_id,
       repo_github_id,
       item_number,
@@ -80,6 +83,7 @@ export async function getCompanyActivity(
         {
           user_login: string;
           user_github_id: number;
+          is_maintainer: boolean | null;
           interactions: number;
         }
       >;
@@ -132,6 +136,7 @@ export async function getCompanyActivity(
       company.users.set(userKey, {
         user_login: row.user_login,
         user_github_id: row.user_github_id,
+        is_maintainer: row.is_maintainer,
         interactions: 0,
       });
     }
@@ -159,6 +164,7 @@ export async function getCompanyActivity(
         .map((u) => ({
           user_login: u.user_login,
           user_github_id: u.user_github_id,
+          is_maintainer: u.is_maintainer,
           interaction_count: u.interactions,
         })),
       repositories: Array.from(company.repos.values())

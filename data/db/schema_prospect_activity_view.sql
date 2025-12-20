@@ -52,7 +52,10 @@ END;
 $$ LANGUAGE plpgsql IMMUTABLE;
 
 -- View for prospect company activity
-CREATE OR REPLACE VIEW prospect_activity AS
+-- Drop the view first to avoid column order conflicts
+DROP VIEW IF EXISTS prospect_activity;
+
+CREATE VIEW prospect_activity AS
 WITH prospect_companies AS (
   -- Find companies that are prospects (exclude customers)
   SELECT DISTINCT
@@ -67,6 +70,7 @@ users_with_companies AS (
   SELECT DISTINCT
     gu.github_id as user_github_id,
     gu.login as user_login,
+    gu.is_maintainer,
     normalize_company_name(
       CASE
         WHEN co.override_company_name IS NOT NULL THEN co.override_company_name
@@ -100,7 +104,8 @@ company_users AS (
     pc.hubspot_company_id,
     pc.company_name,
     uwc.user_github_id,
-    uwc.user_login
+    uwc.user_login,
+    uwc.is_maintainer
   FROM prospect_companies pc
   INNER JOIN users_with_companies uwc 
     ON uwc.normalized_company_name = pc.normalized_company_name
@@ -112,6 +117,7 @@ recent_issues AS (
     cu.company_name,
     cu.user_github_id,
     cu.user_login,
+    cu.is_maintainer,
     i.github_id as item_github_id,
     i.repo_github_id,
     i.number as item_number,
@@ -133,6 +139,7 @@ recent_prs AS (
     cu.company_name,
     cu.user_github_id,
     cu.user_login,
+    cu.is_maintainer,
     pr.github_id as item_github_id,
     pr.repo_github_id,
     pr.number as item_number,
@@ -154,6 +161,7 @@ recent_comments AS (
     cu.company_name,
     cu.user_github_id,
     cu.user_login,
+    cu.is_maintainer,
     ic.issue_github_id as item_github_id,
     COALESCE(i.repo_github_id, pr.repo_github_id) as repo_github_id,
     COALESCE(i.number, pr.number) as item_number,
@@ -177,6 +185,7 @@ recent_reactions AS (
     cu.company_name,
     cu.user_github_id,
     cu.user_login,
+    cu.is_maintainer,
     ir.issue_github_id as item_github_id,
     i.repo_github_id,
     i.number as item_number,
@@ -199,6 +208,7 @@ recent_pr_reviews AS (
     cu.company_name,
     cu.user_github_id,
     cu.user_login,
+    cu.is_maintainer,
     prr.pr_github_id as item_github_id,
     pr.repo_github_id,
     pr.number as item_number,
@@ -220,6 +230,7 @@ SELECT
   company_name,
   user_github_id,
   user_login,
+  is_maintainer,
   item_github_id,
   repo_github_id,
   item_number,
@@ -232,13 +243,77 @@ SELECT
   interaction_date
 FROM recent_issues
 UNION ALL
-SELECT * FROM recent_prs
+SELECT 
+  hubspot_company_id,
+  company_name,
+  user_github_id,
+  user_login,
+  is_maintainer,
+  item_github_id,
+  repo_github_id,
+  item_number,
+  title,
+  state,
+  created_at,
+  updated_at,
+  item_type,
+  interaction_type,
+  interaction_date
+FROM recent_prs
 UNION ALL
-SELECT * FROM recent_comments
+SELECT 
+  hubspot_company_id,
+  company_name,
+  user_github_id,
+  user_login,
+  is_maintainer,
+  item_github_id,
+  repo_github_id,
+  item_number,
+  title,
+  state,
+  created_at,
+  updated_at,
+  item_type,
+  interaction_type,
+  interaction_date
+FROM recent_comments
 UNION ALL
-SELECT * FROM recent_reactions
+SELECT 
+  hubspot_company_id,
+  company_name,
+  user_github_id,
+  user_login,
+  is_maintainer,
+  item_github_id,
+  repo_github_id,
+  item_number,
+  title,
+  state,
+  created_at,
+  updated_at,
+  item_type,
+  interaction_type,
+  interaction_date
+FROM recent_reactions
 UNION ALL
-SELECT * FROM recent_pr_reviews;
+SELECT 
+  hubspot_company_id,
+  company_name,
+  user_github_id,
+  user_login,
+  is_maintainer,
+  item_github_id,
+  repo_github_id,
+  item_number,
+  title,
+  state,
+  created_at,
+  updated_at,
+  item_type,
+  interaction_type,
+  interaction_date
+FROM recent_pr_reviews;
 
 -- Indexes to support the view (on underlying tables)
 -- Note: Most indexes already exist, but we add composite indexes for better query performance

@@ -2,6 +2,8 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "../../lib/authConfig";
 import { getProspectActivity } from "../../lib/queriesCompanyActivity";
 import Link from "next/link";
+import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
+import { faCrown } from "@fortawesome/free-solid-svg-icons";
 
 export default async function ProspectActivityPage() {
   // Require authentication
@@ -79,17 +81,45 @@ export default async function ProspectActivityPage() {
                       {company.users.map((user) => (
                         <li
                           key={user.user_github_id}
-                          className="flex items-center justify-between py-2 px-3 bg-gray-50 rounded hover:bg-gray-100"
+                          className={`flex items-center justify-between py-2 px-3 rounded hover:bg-gray-100 ${
+                            user.is_maintainer
+                              ? "bg-gray-100 opacity-60"
+                              : "bg-gray-50"
+                          }`}
                         >
-                          <Link
-                            href={`https://github.com/${user.user_login}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-blue-600 hover:underline"
+                          <div className="flex items-center gap-2">
+                            <Link
+                              href={`https://github.com/${user.user_login}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className={`hover:underline ${
+                                user.is_maintainer
+                                  ? "text-gray-500"
+                                  : "text-blue-600"
+                              }`}
+                            >
+                              {user.user_login}
+                            </Link>
+                            {user.is_maintainer && (
+                              <span
+                                className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-gray-200 text-gray-700 rounded"
+                                title="Maintainer"
+                              >
+                                <FontAwesomeIcon
+                                  icon={faCrown}
+                                  className="w-3 h-3"
+                                />
+                                Maintainer
+                              </span>
+                            )}
+                          </div>
+                          <span
+                            className={`font-medium ${
+                              user.is_maintainer
+                                ? "text-gray-500"
+                                : "text-gray-600"
+                            }`}
                           >
-                            {user.user_login}
-                          </Link>
-                          <span className="text-gray-600 font-medium">
                             {user.interaction_count} interaction
                             {user.interaction_count !== 1 ? "s" : ""}
                           </span>
