@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { snoozeItem } from "../../lib/snooze";
 import type { NextWorkItemRow } from "../../lib/queries";
 
 interface NextWorkItemCardProps {
@@ -125,6 +126,13 @@ export default function NextWorkItemCard({
       setAiSummaryError(true);
     } finally {
       setIsLoadingAISummary(false);
+    }
+  };
+
+  const handleOpenOnGitHub = () => {
+    // Snooze the item for 1 day when user clicks to open on GitHub
+    if (item.github_id) {
+      snoozeItem(item.item_type, item.github_id, 1);
     }
   };
 
@@ -360,6 +368,7 @@ export default function NextWorkItemCard({
           href={githubUrl}
           target="_blank"
           rel="noopener noreferrer"
+          onClick={handleOpenOnGitHub}
           className="inline-flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium text-sm flex-1 md:flex-initial"
         >
           Open on GitHub

@@ -132,7 +132,7 @@ export default function LeftNav({
   ];
 
   return (
-    <nav className="w-64 bg-gray-50 border-r border-gray-200 min-h-screen p-4">
+    <nav className="hidden md:block w-64 bg-gray-50 border-r border-gray-200 min-h-screen p-4">
       <div className="space-y-6">
         <div className="space-y-1">
           {navItems.map((item) => {
