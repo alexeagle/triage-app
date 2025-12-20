@@ -4,6 +4,7 @@ import { getProspectActivity } from "../../lib/queriesCompanyActivity";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faCrown } from "@fortawesome/free-solid-svg-icons";
+import UserInteractionsButton from "../components/UserInteractionsButton";
 
 export default async function ProspectActivityPage() {
   // Require authentication
@@ -45,10 +46,9 @@ export default async function ProspectActivityPage() {
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
       <div className="mb-6">
-        <h1 className="text-3xl font-bold mb-2">Prospect Activity</h1>
-        <p className="text-gray-600">
-          Activity from prospect companies in the last 30 days
-        </p>
+        <h1 className="text-3xl font-bold mb-2">
+          Prospect Activity: last 30 days
+        </h1>
       </div>
 
       {activityData.length === 0 ? (
@@ -113,16 +113,25 @@ export default async function ProspectActivityPage() {
                               </span>
                             )}
                           </div>
-                          <span
-                            className={`font-medium ${
-                              user.is_maintainer
-                                ? "text-gray-500"
-                                : "text-gray-600"
-                            }`}
-                          >
-                            {user.interaction_count} interaction
-                            {user.interaction_count !== 1 ? "s" : ""}
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span
+                              className={`font-medium ${
+                                user.is_maintainer
+                                  ? "text-gray-500"
+                                  : "text-gray-600"
+                              }`}
+                            >
+                              {user.interaction_count} interaction
+                              {user.interaction_count !== 1 ? "s" : ""}
+                            </span>
+                            <UserInteractionsButton
+                              userLogin={user.user_login}
+                              userGithubId={user.user_github_id}
+                              companyName={company.company_name}
+                              interactionCount={user.interaction_count}
+                              isMaintainer={user.is_maintainer}
+                            />
+                          </div>
                         </li>
                       ))}
                     </ul>
