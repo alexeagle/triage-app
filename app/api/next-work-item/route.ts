@@ -36,10 +36,8 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    const stallInterval = "14 days";
     const nextWorkItem = await getNextWorkItem(
       user.github_id,
-      stallInterval,
       snoozedItems,
     );
 

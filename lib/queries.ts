@@ -943,7 +943,6 @@ export interface NextWorkItemRow {
   repo_full_name: string;
   number: number;
   title: string;
-  score: number;
   stalled: boolean;
   turn: "maintainer" | "author" | null;
   last_interaction_at: string | null;
@@ -952,17 +951,15 @@ export interface NextWorkItemRow {
 }
 
 /**
- * Gets the single best "next thing to work on" for a logged-in user.
- * Combines issues and PRs, applies eligibility filters, scores items, and returns the top result.
+ * Gets the first available "next thing to work on" for a logged-in user.
+ * Combines issues and PRs, applies eligibility filters, and returns the first item.
  *
  * @param userGithubId - GitHub ID of the logged-in user
- * @param stallInterval - PostgreSQL interval string (default: '14 days')
  * @param snoozedItems - Array of snoozed items to exclude: [{ type: 'issue'|'pr', id: number }]
- * @returns The recommended work item, or null if nothing actionable exists
+ * @returns The first available work item, or null if nothing actionable exists
  */
 export async function getNextWorkItem(
   userGithubId: number,
-  stallInterval: string = "14 days",
   snoozedItems: Array<{ type: "issue" | "pr"; id: number }> = [],
 ): Promise<NextWorkItemRow | null> {
   const sql = `
@@ -982,14 +979,8 @@ eligible_issues AS (
     i.title,
     i.updated_at,
     it.turn,
-    -- stalled = true when turn is 'maintainer' AND last_maintainer_action_at is older than stall_interval
-    (it.turn = 'maintainer' AND it.last_maintainer_action_at < NOW() - $2::interval) AS stalled,
-    -- Check if user is assigned (assignees is JSONB array of objects with 'login' field)
-    EXISTS (
-      SELECT 1
-      FROM jsonb_array_elements(i.assignees) AS a
-      WHERE a->>'login' = (SELECT login FROM user_info)
-    ) AS is_assigned,
+    -- stalled = true when turn is 'maintainer' AND last_maintainer_action_at is older than 14 days
+    (it.turn = 'maintainer' AND it.last_maintainer_action_at < NOW() - '14 days'::interval) AS stalled,
     -- Check if user has interacted before
     uii.last_interaction_at
   FROM issues i
@@ -1034,14 +1025,8 @@ eligible_prs AS (
     pr.title,
     pr.updated_at,
     it.turn,
-    -- stalled = true when turn is 'maintainer' AND last_maintainer_action_at is older than stall_interval
-    (it.turn = 'maintainer' AND it.last_maintainer_action_at < NOW() - $2::interval) AS stalled,
-    -- Check if user is assigned
-    EXISTS (
-      SELECT 1
-      FROM jsonb_array_elements(pr.assignees) AS a
-      WHERE a->>'login' = (SELECT login FROM user_info)
-    ) AS is_assigned,
+    -- stalled = true when turn is 'maintainer' AND last_maintainer_action_at is older than 14 days
+    (it.turn = 'maintainer' AND it.last_maintainer_action_at < NOW() - '14 days'::interval) AS stalled,
     -- Check if user has interacted before
     uii.last_interaction_at
   FROM pull_requests pr
@@ -1079,8 +1064,9 @@ eligible_prs AS (
     -- Exclude items waiting on author
     AND (it.turn IS NULL OR it.turn != 'author')
 ),
-scored_items AS (
-  SELECT
+combined_items AS (
+  SELECT 
+    github_id,
     item_type,
     repo_full_name,
     number,
@@ -1088,79 +1074,54 @@ scored_items AS (
     updated_at,
     turn,
     stalled,
-    last_interaction_at,
+    last_interaction_at
+  FROM eligible_issues
+  UNION ALL
+  SELECT 
     github_id,
-    -- Calculate score (additive)
-    (
-      CASE WHEN stalled THEN 50 ELSE 0 END +
-      CASE WHEN turn = 'maintainer' THEN 30 ELSE 0 END +
-      CASE WHEN is_assigned THEN 20 ELSE 0 END +
-      CASE WHEN last_interaction_at IS NOT NULL THEN 15 ELSE 0 END +
-      CASE WHEN updated_at > NOW() - '48 hours'::interval THEN 10 ELSE 0 END +
-      CASE WHEN updated_at < NOW() - '30 days'::interval THEN -10 ELSE 0 END
-    ) AS score
-  FROM (
-    SELECT 
-      github_id,
-      item_type,
-      repo_full_name,
-      number,
-      title,
-      updated_at,
-      turn,
-      stalled,
-      last_interaction_at,
-      is_assigned
-    FROM eligible_issues
-    UNION ALL
-    SELECT 
-      github_id,
-      item_type,
-      repo_full_name,
-      number,
-      title,
-      updated_at,
-      turn,
-      stalled,
-      last_interaction_at,
-      is_assigned
-    FROM eligible_prs
-  ) combined
+    item_type,
+    repo_full_name,
+    number,
+    title,
+    updated_at,
+    turn,
+    stalled,
+    last_interaction_at
+  FROM eligible_prs
 )
 SELECT
   item_type,
   repo_full_name,
   number,
   title,
-  score,
   stalled,
   turn,
   last_interaction_at,
   updated_at,
   github_id
-FROM scored_items
+FROM combined_items
 ${
   snoozedItems.length > 0
     ? `WHERE NOT EXISTS (
   SELECT 1
   FROM (VALUES ${snoozedItems
     .map((_, i) => {
-      const typeParam = 3 + i * 2;
-      const idParam = 4 + i * 2;
+      const typeParam = 2 + i * 2;
+      const idParam = 3 + i * 2;
       return `($${typeParam}::text, $${idParam}::bigint)`;
     })
     .join(", ")} ) AS snoozed(type, id)
-  WHERE snoozed.type = scored_items.item_type
-    AND snoozed.id = scored_items.github_id
+  WHERE snoozed.type = combined_items.item_type
+    AND snoozed.id = combined_items.github_id
 )`
     : ""
 }
-ORDER BY score DESC, updated_at DESC
+ORDER BY github_id
 LIMIT 1;
 `;
 
   // Build parameters array
-  const params: unknown[] = [userGithubId, stallInterval];
+  const params: unknown[] = [userGithubId];
   snoozedItems.forEach((item) => {
     params.push(item.type, item.id);
   });
