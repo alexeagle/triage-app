@@ -1,5 +1,5 @@
 "use client";
-import { useSession } from "next-auth/react";
+import { useSession, signOut } from "next-auth/react";
 import GitHubUser from "./GitHubUser";
 
 export default function Header() {
@@ -40,7 +40,17 @@ export default function Header() {
           avatarUrl={avatarUrl}
           size="lg"
           isMaintainer={false}
+          isEngineeringMember={
+            (session.user as { isEngineeringMember?: boolean })
+              ?.isEngineeringMember ?? false
+          }
         />
+        <button
+          onClick={() => signOut({ callbackUrl: "/" })}
+          className="text-sm text-gray-600 hover:text-gray-800 px-3 py-1 rounded hover:bg-gray-100 transition-colors"
+        >
+          Sign Out
+        </button>
       </div>
     </header>
   );

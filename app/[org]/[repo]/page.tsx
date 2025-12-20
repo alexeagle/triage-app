@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../lib/authConfig";
+import { isCurrentUserEngineeringMember } from "../../../lib/auth";
 import {
   getReposByOrg,
   getRepoIssues,
@@ -27,6 +28,8 @@ export default async function RepoPage({ params }: RepoPageProps) {
   if (!session) {
     redirect("/");
   }
+
+  const isEngineeringMember = await isCurrentUserEngineeringMember();
 
   const repoFullName = `${params.org}/${params.repo}`;
   const repos = await getReposByOrg(params.org);
@@ -99,6 +102,7 @@ export default async function RepoPage({ params }: RepoPageProps) {
                         maintainer.company_classification as CompanyClassification | null
                       }
                       githubUserId={maintainer.github_user_id}
+                      isEngineeringMember={isEngineeringMember}
                     />
                     <span className="text-gray-500 text-xs">
                       ({maintainer.source}, {maintainer.confidence}% confidence)

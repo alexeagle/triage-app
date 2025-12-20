@@ -23,6 +23,9 @@ export default function PullRequestsTable({
   maintainerRepoIds = [],
 }: PullRequestsTableProps) {
   const { data: session } = useSession();
+  const isEngineeringMember =
+    (session?.user as { isEngineeringMember?: boolean })?.isEngineeringMember ??
+    false;
 
   const [draftFilter, setDraftFilter] = useState<"all" | "draft" | "not draft">(
     "all",
@@ -297,6 +300,7 @@ export default function PullRequestsTable({
                       pr.author_company_classification as CompanyClassification | null
                     }
                     githubUserId={pr.author_github_id ?? null}
+                    isEngineeringMember={isEngineeringMember}
                   />
                 </td>
                 <td className="px-4 py-2 text-sm">

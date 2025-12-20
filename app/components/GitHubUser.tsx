@@ -23,6 +23,7 @@ interface GitHubUserProps {
   company?: string | null;
   companyClassification?: CompanyClassification | null;
   githubUserId?: number | null;
+  isEngineeringMember?: boolean;
 }
 
 const sizeClasses = {
@@ -42,6 +43,7 @@ export default function GitHubUser({
   company,
   companyClassification,
   githubUserId,
+  isEngineeringMember = false,
 }: GitHubUserProps) {
   const avatarSize = sizeClasses[size];
   const iconSize =
@@ -57,17 +59,25 @@ export default function GitHubUser({
 
   const [showOverrideDialog, setShowOverrideDialog] = useState(false);
 
+  // Only show company data if user is an engineering team member
+  const showCompanyData = isEngineeringMember;
+
   const hasBio = bio && bio.trim().length > 0;
-  const hasCompany = company && company.trim().length > 0;
-  const isAspectBuild = company?.toLowerCase() === "aspect build";
-  const isCustomer = companyClassification === CompanyClassification.CUSTOMER;
-  const isProspect = companyClassification === CompanyClassification.PROSPECT;
+  const hasCompany = showCompanyData && company && company.trim().length > 0;
+  const isAspectBuild =
+    showCompanyData && company?.toLowerCase() === "aspect build";
+  const isCustomer =
+    showCompanyData && companyClassification === CompanyClassification.CUSTOMER;
+  const isProspect =
+    showCompanyData && companyClassification === CompanyClassification.PROSPECT;
 
   // Check if we have a company badge (Aspect Build logo, C, or P)
   const hasCompanyBadge = isAspectBuild || isCustomer || isProspect;
 
   // Show info circle only if there's no company badge but we have bio or company info
-  const showInfoCircle = !hasCompanyBadge && (hasBio || hasCompany);
+  // Only show company info in tooltip if user is engineering member
+  const showInfoCircle =
+    !hasCompanyBadge && (hasBio || (showCompanyData && hasCompany));
 
   const handleOverrideSave = () => {
     // Refresh the page to show updated company
@@ -142,7 +152,7 @@ export default function GitHubUser({
           {renderTooltip()}
         </div>
       )}
-      {githubUserId && (hasCompany || hasBio) && (
+      {githubUserId && showCompanyData && (hasCompany || hasBio) && (
         <button
           onClick={(e) => {
             e.preventDefault();

@@ -8,6 +8,7 @@ import { NextAuthOptions } from "next-auth";
 import GitHubProvider from "next-auth/providers/github";
 import { upsertUser } from "./auth";
 import { syncStarredRepos } from "./syncStarredRepos";
+import { isAspectBuildMember } from "./githubTeamMembership";
 
 export const authOptions: NextAuthOptions = {
   debug: true,
@@ -16,6 +17,11 @@ export const authOptions: NextAuthOptions = {
     GitHubProvider({
       clientId: process.env.GITHUB_CLIENT_ID!,
       clientSecret: process.env.GITHUB_CLIENT_SECRET!,
+      authorization: {
+        params: {
+          scope: "read:user user:email",
+        },
+      },
       profile(profile) {
         return {
           id: profile.id,
@@ -83,8 +89,25 @@ export const authOptions: NextAuthOptions = {
         token.login = githubProfile.login;
         token.avatar_url = githubProfile.avatar_url;
         token.accessToken = account.access_token;
+
+        // Check if user is a member of aspect-build organization
+        // This works without a token for public memberships, but token allows checking private memberships too
+        try {
+          const isMember = await isAspectBuildMember(
+            githubProfile.login,
+            account.access_token,
+          );
+          token.isEngineeringMember = isMember;
+        } catch (error) {
+          // Log error but don't block login
+          console.error(
+            `[authConfig] Error checking org membership for ${githubProfile.login}:`,
+            error,
+          );
+          token.isEngineeringMember = false;
+        }
       }
-      // Preserve avatar_url from existing token if profile is not available (subsequent requests)
+      // Preserve existing values if profile is not available (subsequent requests)
       return token;
     },
     async session({ session, token }) {
@@ -96,6 +119,7 @@ export const authOptions: NextAuthOptions = {
             login?: string;
             avatar_url?: string;
             image?: string;
+            isEngineeringMember?: boolean;
           }
         ).github_id = token.github_id as number;
         (
@@ -104,6 +128,7 @@ export const authOptions: NextAuthOptions = {
             login?: string;
             avatar_url?: string;
             image?: string;
+            isEngineeringMember?: boolean;
           }
         ).login = token.login as string;
         // Set both avatar_url and image for compatibility
@@ -114,6 +139,10 @@ export const authOptions: NextAuthOptions = {
           (session.user as { avatar_url?: string; image?: string }).image =
             avatarUrl;
         }
+        // Add engineering team membership status
+        (
+          session.user as { isEngineeringMember?: boolean }
+        ).isEngineeringMember = (token.isEngineeringMember as boolean) ?? false;
         // @ts-ignore - Add access token to session if needed
         session.accessToken = token.accessToken;
       }

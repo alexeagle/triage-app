@@ -1,5 +1,6 @@
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../lib/authConfig";
+import { isCurrentUserEngineeringMember } from "../../lib/auth";
 import { getProspectActivity } from "../../lib/queriesCompanyActivity";
 import Link from "next/link";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
@@ -19,6 +20,19 @@ export default async function ProspectActivityPage() {
         >
           Sign In
         </a>
+      </div>
+    );
+  }
+
+  // Require engineering team membership
+  const isEngineeringMember = await isCurrentUserEngineeringMember();
+  if (!isEngineeringMember) {
+    return (
+      <div className="container mx-auto px-4 py-8 max-w-full">
+        <p className="text-gray-600 mb-6">
+          Access restricted. You must be a member of the aspect-build
+          organization to view this page.
+        </p>
       </div>
     );
   }

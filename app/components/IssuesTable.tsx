@@ -15,6 +15,9 @@ interface IssuesTableProps {
 
 export default function IssuesTable({ issues }: IssuesTableProps) {
   const { data: session } = useSession();
+  const isEngineeringMember =
+    (session?.user as { isEngineeringMember?: boolean })?.isEngineeringMember ??
+    false;
 
   const [typeFilter, setTypeFilter] = useState<
     "all" | "feature request" | "bug" | "other"
@@ -235,6 +238,7 @@ export default function IssuesTable({ issues }: IssuesTableProps) {
                       i.author_company_classification as CompanyClassification | null
                     }
                     githubUserId={i.author_github_id ?? null}
+                    isEngineeringMember={isEngineeringMember}
                   />
                 </td>
                 <td className="px-4 py-2 text-sm">

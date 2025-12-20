@@ -14,6 +14,7 @@ import {
   faBuilding,
   faDatabase,
   faCircleNotch,
+  faUserTie,
 } from "@fortawesome/free-solid-svg-icons";
 
 interface LeftNavProps {
@@ -99,6 +100,10 @@ export default function LeftNav({
     },
   ];
 
+  const isAspectBuildMember =
+    (session?.user as { isEngineeringMember?: boolean })?.isEngineeringMember ??
+    false;
+
   const reportItems = [
     {
       href: "/reports/maintainer-turn",
@@ -110,6 +115,15 @@ export default function LeftNav({
       label: "Count of open issues/PRs in repos I maintain",
       icon: faList,
     },
+    ...(isAspectBuildMember
+      ? [
+          {
+            href: "/prospecting",
+            label: "Prospect Activity",
+            icon: faUserTie,
+          },
+        ]
+      : []),
   ];
 
   return (

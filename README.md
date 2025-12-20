@@ -61,10 +61,6 @@ This provides fast SSR, durable state, and predictable sync behavior with minima
 
 ## Future Directions (Detailed Exploration)
 
-### 0.
-- Show whether logged in user is Aspect employee based on membership in aspect-build engineering team
-- Only show Customer/Prospect enrichment if logged in user is aspect
-
 ### 1. Repo Visualization and Health Signals
 Build out the “maintenance treemap” visualization for each repo. The goal is a single image that encodes PR activity (size, staleness, reviewer blockage) on the left and issues (age, severity, ownership) on the right. This becomes the default landing page for each repo and helps quickly identify hotspots, neglected areas, and easy wins. Future extensions include interactive overlays, sparkline activity graphs, CI flakes, and ownership boundaries.
 

@@ -80,3 +80,22 @@ export async function getCurrentUser(): Promise<UserRow | null> {
 
   return results[0];
 }
+
+/**
+ * Checks if the current user is a member of the aspect-build organization.
+ *
+ * @returns true if user is a member, false otherwise
+ */
+export async function isCurrentUserEngineeringMember(): Promise<boolean> {
+  const session = await getServerSession(authOptions);
+
+  if (!session || !session.user) {
+    return false;
+  }
+
+  const isAspectBuildMember = (
+    session.user as { isEngineeringMember?: boolean }
+  ).isEngineeringMember;
+
+  return isAspectBuildMember ?? false;
+}
