@@ -948,184 +948,28 @@ export interface NextWorkItemRow {
   last_interaction_at: string | null;
   updated_at: string;
   github_id: number;
+  explanation?: {
+    primary: string;
+    secondary: string[];
+  };
+  scoring?: {
+    base_score: number;
+    preference_boost: number;
+    total_score: number;
+    waiting_on_me_contribution: number;
+    known_customer_contribution: number;
+    recent_activity_contribution: number;
+    quick_win_contribution: number;
+    community_interest_contribution: number;
+    signals: {
+      is_known_customer_author: boolean;
+      is_repo_maintained_or_starred: boolean;
+      waiting_on_me: boolean;
+      quick_win: boolean;
+      reaction_score: number;
+      unique_commenter_count: number;
+      last_activity_at: string;
+    };
+  };
 }
 
-/**
- * Gets the first available "next thing to work on" for a logged-in user.
- * Combines issues and PRs, applies eligibility filters, and returns the first item.
- *
- * @param userGithubId - GitHub ID of the logged-in user
- * @param snoozedItems - Array of snoozed items to exclude: [{ type: 'issue'|'pr', id: number }]
- * @returns The first available work item, or null if nothing actionable exists
- */
-export async function getNextWorkItem(
-  userGithubId: number,
-  snoozedItems: Array<{ type: "issue" | "pr"; id: number }> = [],
-): Promise<NextWorkItemRow | null> {
-  const sql = `
-WITH user_info AS (
-  -- Get user's login from github_id
-  -- If user doesn't exist, this returns no rows and the query will return no results
-  SELECT login
-  FROM github_users
-  WHERE github_id = $1
-),
-eligible_issues AS (
-  SELECT
-    i.github_id,
-    'issue' AS item_type,
-    r.full_name AS repo_full_name,
-    i.number,
-    i.title,
-    i.updated_at,
-    it.turn,
-    -- stalled = true when turn is 'maintainer' AND last_maintainer_action_at is older than 14 days
-    (it.turn = 'maintainer' AND it.last_maintainer_action_at < NOW() - '14 days'::interval) AS stalled,
-    -- Check if user has interacted before
-    uii.last_interaction_at
-  FROM issues i
-  INNER JOIN repos r ON i.repo_github_id = r.github_id
-  LEFT JOIN issue_turns it ON i.github_id = it.issue_github_id
-  LEFT JOIN user_item_interactions_mv uii 
-    ON uii.user_github_id = $1
-    AND uii.item_type = 'issue'
-    AND uii.item_github_id = i.github_id
-  WHERE i.state = 'open'
-    -- Repo is either starred by user OR maintained by user
-    AND (
-      EXISTS (
-        SELECT 1 FROM repo_stars rs
-        WHERE rs.repo_github_id = r.github_id
-        AND rs.user_github_id = $1
-      )
-      OR EXISTS (
-        SELECT 1 FROM repo_maintainers rm
-        WHERE rm.repo_github_id = r.github_id
-        AND rm.github_user_id = $1
-      )
-    )
-    -- Item is actionable: turn = 'maintainer' OR assigned to user
-    AND (
-      it.turn = 'maintainer'
-      OR EXISTS (
-        SELECT 1
-        FROM jsonb_array_elements(i.assignees) AS a
-        WHERE a->>'login' = (SELECT login FROM user_info)
-      )
-    )
-    -- Exclude items waiting on author
-    AND (it.turn IS NULL OR it.turn != 'author')
-),
-eligible_prs AS (
-  SELECT
-    pr.github_id,
-    'pr' AS item_type,
-    r.full_name AS repo_full_name,
-    pr.number,
-    pr.title,
-    pr.updated_at,
-    it.turn,
-    -- stalled = true when turn is 'maintainer' AND last_maintainer_action_at is older than 14 days
-    (it.turn = 'maintainer' AND it.last_maintainer_action_at < NOW() - '14 days'::interval) AS stalled,
-    -- Check if user has interacted before
-    uii.last_interaction_at
-  FROM pull_requests pr
-  INNER JOIN repos r ON pr.repo_github_id = r.github_id
-  LEFT JOIN issue_turns it ON pr.github_id = it.issue_github_id
-  LEFT JOIN user_item_interactions_mv uii 
-    ON uii.user_github_id = $1
-    AND uii.item_type = 'pr'
-    AND uii.item_github_id = pr.github_id
-  WHERE pr.state = 'open'
-    -- Exclude draft PRs
-    AND pr.draft = false
-    -- Repo is either starred by user OR maintained by user
-    AND (
-      EXISTS (
-        SELECT 1 FROM repo_stars rs
-        WHERE rs.repo_github_id = r.github_id
-        AND rs.user_github_id = $1
-      )
-      OR EXISTS (
-        SELECT 1 FROM repo_maintainers rm
-        WHERE rm.repo_github_id = r.github_id
-        AND rm.github_user_id = $1
-      )
-    )
-    -- Item is actionable: turn = 'maintainer' OR assigned to user
-    AND (
-      it.turn = 'maintainer'
-      OR EXISTS (
-        SELECT 1
-        FROM jsonb_array_elements(pr.assignees) AS a
-        WHERE a->>'login' = (SELECT login FROM user_info)
-      )
-    )
-    -- Exclude items waiting on author
-    AND (it.turn IS NULL OR it.turn != 'author')
-),
-combined_items AS (
-  SELECT 
-    github_id,
-    item_type,
-    repo_full_name,
-    number,
-    title,
-    updated_at,
-    turn,
-    stalled,
-    last_interaction_at
-  FROM eligible_issues
-  UNION ALL
-  SELECT 
-    github_id,
-    item_type,
-    repo_full_name,
-    number,
-    title,
-    updated_at,
-    turn,
-    stalled,
-    last_interaction_at
-  FROM eligible_prs
-)
-SELECT
-  item_type,
-  repo_full_name,
-  number,
-  title,
-  stalled,
-  turn,
-  last_interaction_at,
-  updated_at,
-  github_id
-FROM combined_items
-${
-  snoozedItems.length > 0
-    ? `WHERE NOT EXISTS (
-  SELECT 1
-  FROM (VALUES ${snoozedItems
-    .map((_, i) => {
-      const typeParam = 2 + i * 2;
-      const idParam = 3 + i * 2;
-      return `($${typeParam}::text, $${idParam}::bigint)`;
-    })
-    .join(", ")} ) AS snoozed(type, id)
-  WHERE snoozed.type = combined_items.item_type
-    AND snoozed.id = combined_items.github_id
-)`
-    : ""
-}
-ORDER BY github_id
-LIMIT 1;
-`;
-
-  // Build parameters array
-  const params: unknown[] = [userGithubId];
-  snoozedItems.forEach((item) => {
-    params.push(item.type, item.id);
-  });
-
-  const results = await query<NextWorkItemRow>(sql, params);
-  return results.length > 0 ? results[0] : null;
-}

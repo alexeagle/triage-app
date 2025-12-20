@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../../lib/authConfig";
 import { getCurrentUser } from "../../../lib/auth";
-import { getNextWorkItem } from "../../../lib/queries";
+import { getNextWorkItem, type WorkItemPreferences } from "../../../lib/nextWorkItem";
 
 /**
  * GET /api/next-work-item
@@ -36,9 +36,22 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Get user preferences for ranking
+    const preferences: WorkItemPreferences = {
+      prefer_known_customers: user.prefer_known_customers ?? false,
+      prefer_recent_activity: user.prefer_recent_activity ?? true,
+      prefer_waiting_on_me: user.prefer_waiting_on_me ?? true,
+      prefer_quick_wins: user.prefer_quick_wins ?? true,
+    };
+
+    // Include scoring details for troubleshooting when user is "alexeagle" or "jbedard"
+    const includeScoring = user.login === "alexeagle" || user.login === "jbedard";
+
     const nextWorkItem = await getNextWorkItem(
       user.github_id,
+      preferences,
       snoozedItems,
+      includeScoring,
     );
 
     return NextResponse.json({

@@ -57,28 +57,35 @@ export default function NextWorkItemCard({
 
   const githubUrl = `https://github.com/${item.repo_full_name}/${item.item_type === "pr" ? "pull" : "issues"}/${item.number}`;
 
-  // Generate "why" text
+  // Use explanation if available, otherwise fallback to legacy logic
   let whyText = "";
-  const hasInteracted = item.last_interaction_at !== null;
-
-  if (item.stalled && item.turn === "maintainer") {
-    const daysAgo = formatDaysAgo(item.updated_at);
-    whyText = `Waiting on maintainers since ${daysAgo}`;
-    if (hasInteracted) {
-      const interactionDaysAgo = formatDaysAgo(item.last_interaction_at!);
-      whyText += ` • You interacted ${interactionDaysAgo}`;
-    }
-  } else if (item.turn === "maintainer") {
-    whyText = "Waiting on maintainer response";
-    if (hasInteracted) {
-      const interactionDaysAgo = formatDaysAgo(item.last_interaction_at!);
-      whyText += ` • You interacted ${interactionDaysAgo}`;
+  if (item.explanation) {
+    whyText = item.explanation.primary;
+    if (item.explanation.secondary.length > 0) {
+      whyText += ` • ${item.explanation.secondary.join(" • ")}`;
     }
   } else {
-    whyText = "Assigned to you";
-    if (hasInteracted) {
-      const interactionDaysAgo = formatDaysAgo(item.last_interaction_at!);
-      whyText += ` • You interacted ${interactionDaysAgo}`;
+    // Legacy fallback logic
+    const hasInteracted = item.last_interaction_at !== null;
+    if (item.stalled && item.turn === "maintainer") {
+      const daysAgo = formatDaysAgo(item.updated_at);
+      whyText = `Waiting on maintainers since ${daysAgo}`;
+      if (hasInteracted) {
+        const interactionDaysAgo = formatDaysAgo(item.last_interaction_at!);
+        whyText += ` • You interacted ${interactionDaysAgo}`;
+      }
+    } else if (item.turn === "maintainer") {
+      whyText = "Waiting on maintainer response";
+      if (hasInteracted) {
+        const interactionDaysAgo = formatDaysAgo(item.last_interaction_at!);
+        whyText += ` • You interacted ${interactionDaysAgo}`;
+      }
+    } else {
+      whyText = "Assigned to you";
+      if (hasInteracted) {
+        const interactionDaysAgo = formatDaysAgo(item.last_interaction_at!);
+        whyText += ` • You interacted ${interactionDaysAgo}`;
+      }
     }
   }
 
@@ -138,7 +145,18 @@ export default function NextWorkItemCard({
           <h3 className="text-gray-900 font-medium mb-2 line-clamp-2">
             {item.repo_full_name}#{item.number} {item.title}
           </h3>
-          <p className="text-sm text-gray-600">{whyText}</p>
+          {item.explanation ? (
+            <div className="text-sm">
+              <p className="text-gray-900 font-medium">{item.explanation.primary}</p>
+              {item.explanation.secondary.length > 0 && (
+                <p className="text-gray-600 mt-1">
+                  {item.explanation.secondary.join(" • ")}
+                </p>
+              )}
+            </div>
+          ) : (
+            <p className="text-sm text-gray-600">{whyText}</p>
+          )}
         </div>
       </div>
       <div className="mt-4 pt-4 border-t border-gray-200">
@@ -214,6 +232,129 @@ export default function NextWorkItemCard({
           </div>
         )}
       </div>
+      {item.scoring && (
+        <div className="mt-4 pt-4 border-t border-gray-200">
+          <div className="text-sm font-medium text-gray-700 mb-3">
+            Scoring Details
+          </div>
+          <div className="space-y-2 text-sm">
+            <div className="grid grid-cols-2 gap-2">
+              <div>
+                <span className="text-gray-600">Total Score:</span>
+                <span className="ml-2 font-mono font-medium">
+                  {item.scoring.total_score}
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-600">Base Score:</span>
+                <span className="ml-2 font-mono">
+                  {item.scoring.base_score}
+                </span>
+              </div>
+              <div>
+                <span className="text-gray-600">Preference Boost:</span>
+                <span className="ml-2 font-mono">
+                  {item.scoring.preference_boost}
+                </span>
+              </div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              <div className="text-xs font-medium text-gray-500 mb-2">
+                Score Contributions:
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span className="text-gray-600">Waiting on me:</span>
+                  <span className="ml-2 font-mono">
+                    {item.scoring.waiting_on_me_contribution}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-600">Known customer:</span>
+                  <span className="ml-2 font-mono">
+                    {item.scoring.known_customer_contribution}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-600">Recent activity:</span>
+                  <span className="ml-2 font-mono">
+                    {item.scoring.recent_activity_contribution}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-600">Quick win:</span>
+                  <span className="ml-2 font-mono">
+                    {item.scoring.quick_win_contribution}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-600">Community interest:</span>
+                  <span className="ml-2 font-mono">
+                    {item.scoring.community_interest_contribution}
+                  </span>
+                </div>
+              </div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-gray-100">
+              <div className="text-xs font-medium text-gray-500 mb-2">
+                Signals:
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div>
+                  <span className="text-gray-600">Known customer author:</span>
+                  <span className="ml-2 font-mono">
+                    {item.scoring.signals.is_known_customer_author
+                      ? "true"
+                      : "false"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-600">
+                    Repo maintained/starred:
+                  </span>
+                  <span className="ml-2 font-mono">
+                    {item.scoring.signals.is_repo_maintained_or_starred
+                      ? "true"
+                      : "false"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-600">Waiting on me:</span>
+                  <span className="ml-2 font-mono">
+                    {item.scoring.signals.waiting_on_me ? "true" : "false"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-600">Quick win:</span>
+                  <span className="ml-2 font-mono">
+                    {item.scoring.signals.quick_win ? "true" : "false"}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-600">Reaction score:</span>
+                  <span className="ml-2 font-mono">
+                    {item.scoring.signals.reaction_score}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-gray-600">Unique commenters:</span>
+                  <span className="ml-2 font-mono">
+                    {item.scoring.signals.unique_commenter_count}
+                  </span>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-gray-600">Last activity:</span>
+                  <span className="ml-2 font-mono text-xs">
+                    {new Date(
+                      item.scoring.signals.last_activity_at,
+                    ).toLocaleString()}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex gap-3 items-center mt-4">
         <a
           href={githubUrl}
