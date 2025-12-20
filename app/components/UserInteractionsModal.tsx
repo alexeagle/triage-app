@@ -136,7 +136,7 @@ export default function UserInteractionsModal({
             <ul className="space-y-3">
               {interactions.map((interaction) => (
                 <li
-                  key={`${interaction.item_github_id}-${interaction.interaction_type}`}
+                  key={interaction.item_github_id}
                   className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors"
                 >
                   <div className="flex items-start justify-between gap-4">
