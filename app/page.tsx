@@ -1,4 +1,4 @@
-import { getCurrentUser } from "../lib/auth";
+import { getCurrentUser, isCurrentUserEngineeringMember } from "../lib/auth";
 import NextWorkItemSection from "./components/NextWorkItemSection";
 
 export default async function HomePage() {
@@ -22,10 +22,12 @@ export default async function HomePage() {
     );
   }
 
+  const isAspectBuildMember = await isCurrentUserEngineeringMember();
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-full">
       {/* What should I work on next? - Always visible */}
-      <NextWorkItemSection />
+      <NextWorkItemSection isAspectBuildMember={isAspectBuildMember} />
     </div>
   );
 }

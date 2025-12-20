@@ -91,20 +91,40 @@ export const authOptions: NextAuthOptions = {
         token.accessToken = account.access_token;
 
         // Check if user is a member of aspect-build organization
-        // This works without a token for public memberships, but token allows checking private memberships too
+        // First check database override - if true, always use that
+        // Otherwise check GitHub org membership
         try {
-          const isMember = await isAspectBuildMember(
-            githubProfile.login,
-            account.access_token,
+          const { query } = await import("./db");
+          const dbResults = await query<{ is_aspect_build_member: boolean }>(
+            `SELECT COALESCE(is_aspect_build_member, false) as is_aspect_build_member
+             FROM users
+             WHERE github_id = $1`,
+            [githubProfile.id],
           );
-          token.isEngineeringMember = isMember;
+
+          // If database has override set to true, use that and don't overwrite
+          if (dbResults.length > 0 && dbResults[0].is_aspect_build_member) {
+            token.isEngineeringMember = true;
+          } else {
+            // Otherwise check GitHub org membership
+            // This works without a token for public memberships, but token allows checking private memberships too
+            const isMember = await isAspectBuildMember(
+              githubProfile.login,
+              account.access_token,
+            );
+            token.isEngineeringMember = isMember;
+          }
         } catch (error) {
           // Log error but don't block login
+          // If database check failed, try to preserve existing value
           console.error(
             `[authConfig] Error checking org membership for ${githubProfile.login}:`,
             error,
           );
-          token.isEngineeringMember = false;
+          // Only set to false if we don't have an existing true value in token
+          if (token.isEngineeringMember !== true) {
+            token.isEngineeringMember = false;
+          }
         }
       }
       // Preserve existing values if profile is not available (subsequent requests)

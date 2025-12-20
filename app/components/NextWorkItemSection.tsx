@@ -13,7 +13,13 @@ interface WorkPreferences {
   prefer_quick_wins: boolean;
 }
 
-export default function NextWorkItemSection() {
+interface NextWorkItemSectionProps {
+  isAspectBuildMember?: boolean;
+}
+
+export default function NextWorkItemSection({
+  isAspectBuildMember = false,
+}: NextWorkItemSectionProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [nextWorkItem, setNextWorkItem] = useState<NextWorkItemRow | null>(
@@ -150,20 +156,22 @@ export default function NextWorkItemSection() {
       {/* Preference toggles */}
       <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <label className="flex items-center space-x-2 cursor-pointer">
-            <input
-              type="checkbox"
-              checked={preferences.prefer_known_customers}
-              onChange={(e) =>
-                updatePreference("prefer_known_customers", e.target.checked)
-              }
-              disabled={isLoadingPreferences}
-              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-            />
-            <span className="text-sm text-gray-700">
-              Prefer known customers
-            </span>
-          </label>
+          {isAspectBuildMember && (
+            <label className="flex items-center space-x-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={preferences.prefer_known_customers}
+                onChange={(e) =>
+                  updatePreference("prefer_known_customers", e.target.checked)
+                }
+                disabled={isLoadingPreferences}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+              />
+              <span className="text-sm text-gray-700">
+                Prefer known customers
+              </span>
+            </label>
+          )}
 
           <label className="flex items-center space-x-2 cursor-pointer">
             <input
