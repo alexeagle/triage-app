@@ -8,7 +8,7 @@
 
 import { query } from "../db/index.js";
 import { syncHubSpotCompany } from "../hubspot/syncCompany.js";
-import { normalizeCompanyNameForMatching } from "../db/classifyCompany.js";
+import { normalizeCompanyNameForMatching } from "../db/normalizeCompanyName.js";
 
 interface CompanyRow {
   company_name: string | null;
@@ -51,7 +51,7 @@ async function getExistingHubSpotCompaniesMap(): Promise<
   const existingMap = new Map<string, HubSpotCompanyMatch>();
   for (const company of existingCompanies.rows) {
     if (company.name) {
-      const normalized = normalizeCompanyNameForMatching(company.name);
+      const normalized = await normalizeCompanyNameForMatching(company.name);
       if (normalized) {
         existingMap.set(normalized, company);
       }
@@ -119,7 +119,7 @@ async function findCompaniesToSync(
     const companyName = company.company_name;
     if (!companyName) continue;
 
-    const normalized = normalizeCompanyNameForMatching(companyName);
+    const normalized = await normalizeCompanyNameForMatching(companyName);
     if (!normalized) continue;
 
     const existing = existingMap.get(normalized);
@@ -186,7 +186,7 @@ export async function syncHubSpotCompaniesIncremental(
 
       try {
         // Check if this company already exists in hubspot_companies
-        const normalized = normalizeCompanyNameForMatching(
+        const normalized = await normalizeCompanyNameForMatching(
           company.company_name,
         );
         const existingMatch = normalized
