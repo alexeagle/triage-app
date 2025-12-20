@@ -30,8 +30,9 @@ export async function getUserInteractionDetails(
   userGithubId: number,
   companyName: string,
 ): Promise<UserInteractionDetail[]> {
-  // Get interactions from prospect_activity view, deduplicated by item_github_id
-  // For each item, show the most recent interaction and combine interaction types
+  // Get interactions from company_activity_base view, deduplicated by item_github_id.
+  // For each item, show the most recent interaction and combine interaction types.
+  // We filter by company name to get interactions for that specific company.
   const activity = await query<{
     item_github_id: number;
     item_type: string;
@@ -51,7 +52,7 @@ export async function getUserInteractionDetails(
       ARRAY_AGG(DISTINCT interaction_type ORDER BY interaction_type) as interaction_types,
       MAX(interaction_date) as interaction_date,
       BOOL_OR(interaction_type = 'author') as is_author
-     FROM prospect_activity
+     FROM company_activity_base
      WHERE user_github_id = $1
        AND company_name = $2
      GROUP BY item_github_id, item_type, item_number, title, repo_github_id

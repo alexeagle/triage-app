@@ -151,16 +151,24 @@ export default function UserInteractionsModal({
                         >
                           {interaction.item_type.toUpperCase()}
                         </span>
-                        <span className="text-xs text-gray-500">
-                          {formatInteractionTypes(
-                            interaction.interaction_types,
-                          )}
-                        </span>
-                        {interaction.is_author && (
+                        {interaction.interaction_types.includes("author") && (
                           <span className="text-xs font-medium text-gray-700 bg-gray-200 px-2 py-0.5 rounded">
                             Author
                           </span>
                         )}
+                        {(() => {
+                          const otherTypes =
+                            interaction.interaction_types.filter(
+                              (type) => type !== "author",
+                            );
+                          return (
+                            otherTypes.length > 0 && (
+                              <span className="text-xs text-gray-500">
+                                {formatInteractionTypes(otherTypes)}
+                              </span>
+                            )
+                          );
+                        })()}
                       </div>
                       <h3 className="font-medium text-gray-900 mb-1">
                         {interaction.title}
