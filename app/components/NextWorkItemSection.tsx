@@ -6,6 +6,13 @@ import { getActiveSnoozes, snoozeItem } from "../../lib/snooze";
 import NextWorkItemCard from "./NextWorkItemCard";
 import type { NextWorkItemRow } from "../../lib/queries";
 
+interface WorkPreferences {
+  prefer_known_customers: boolean;
+  prefer_recent_activity: boolean;
+  prefer_waiting_on_me: boolean;
+  prefer_quick_wins: boolean;
+}
+
 export default function NextWorkItemSection() {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -13,6 +20,13 @@ export default function NextWorkItemSection() {
     null,
   );
   const [isLoading, setIsLoading] = useState(true);
+  const [preferences, setPreferences] = useState<WorkPreferences>({
+    prefer_known_customers: false,
+    prefer_recent_activity: true,
+    prefer_waiting_on_me: true,
+    prefer_quick_wins: true,
+  });
+  const [isLoadingPreferences, setIsLoadingPreferences] = useState(true);
 
   // Fetch the next work item, excluding snoozed items
   const fetchNextWorkItem = async () => {
@@ -46,8 +60,67 @@ export default function NextWorkItemSection() {
     }
   };
 
+  // Fetch preferences on mount
+  const fetchPreferences = async () => {
+    setIsLoadingPreferences(true);
+    try {
+      const response = await fetch("/api/user/preferences");
+      if (!response.ok) {
+        throw new Error("Failed to fetch preferences");
+      }
+      const data = await response.json();
+      setPreferences({
+        prefer_known_customers: data.prefer_known_customers ?? false,
+        prefer_recent_activity: data.prefer_recent_activity ?? true,
+        prefer_waiting_on_me: data.prefer_waiting_on_me ?? true,
+        prefer_quick_wins: data.prefer_quick_wins ?? true,
+      });
+    } catch (error) {
+      console.error("Error fetching preferences:", error);
+    } finally {
+      setIsLoadingPreferences(false);
+    }
+  };
+
+  // Update a single preference
+  const updatePreference = async (
+    key: keyof WorkPreferences,
+    value: boolean,
+  ) => {
+    // Optimistically update UI
+    setPreferences((prev) => ({ ...prev, [key]: value }));
+
+    try {
+      const response = await fetch("/api/user/preferences", {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ [key]: value }),
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to update preference");
+      }
+
+      const data = await response.json();
+      // Update with server response to ensure consistency
+      setPreferences({
+        prefer_known_customers: data.prefer_known_customers ?? false,
+        prefer_recent_activity: data.prefer_recent_activity ?? true,
+        prefer_waiting_on_me: data.prefer_waiting_on_me ?? true,
+        prefer_quick_wins: data.prefer_quick_wins ?? true,
+      });
+    } catch (error) {
+      console.error("Error updating preference:", error);
+      // Revert on error
+      setPreferences((prev) => ({ ...prev, [key]: !value }));
+    }
+  };
+
   // Fetch on mount
   useEffect(() => {
+    fetchPreferences();
     fetchNextWorkItem();
   }, []);
 
@@ -73,6 +146,68 @@ export default function NextWorkItemSection() {
       <h2 className="text-2xl font-semibold mb-4">
         What should I work on next?
       </h2>
+
+      {/* Preference toggles */}
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <label className="flex items-center space-x-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={preferences.prefer_known_customers}
+              onChange={(e) =>
+                updatePreference("prefer_known_customers", e.target.checked)
+              }
+              disabled={isLoadingPreferences}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <span className="text-sm text-gray-700">
+              Prefer known customers
+            </span>
+          </label>
+
+          <label className="flex items-center space-x-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={preferences.prefer_recent_activity}
+              onChange={(e) =>
+                updatePreference("prefer_recent_activity", e.target.checked)
+              }
+              disabled={isLoadingPreferences}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <span className="text-sm text-gray-700">Prefer recent activity</span>
+          </label>
+
+          <label className="flex items-center space-x-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={preferences.prefer_waiting_on_me}
+              onChange={(e) =>
+                updatePreference("prefer_waiting_on_me", e.target.checked)
+              }
+              disabled={isLoadingPreferences}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <span className="text-sm text-gray-700">
+              Prefer items waiting on me
+            </span>
+          </label>
+
+          <label className="flex items-center space-x-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={preferences.prefer_quick_wins}
+              onChange={(e) =>
+                updatePreference("prefer_quick_wins", e.target.checked)
+              }
+              disabled={isLoadingPreferences}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <span className="text-sm text-gray-700">Look for quick wins</span>
+          </label>
+        </div>
+      </div>
+
       {isLoading ? (
         <div className="bg-gray-50 border border-gray-200 rounded-lg p-6 text-center">
           <p className="text-gray-600">Loading recommendation...</p>

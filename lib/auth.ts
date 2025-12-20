@@ -16,6 +16,10 @@ export interface UserRow {
   avatar_url: string | null;
   created_at: string;
   starred_only: boolean;
+  prefer_known_customers: boolean;
+  prefer_recent_activity: boolean;
+  prefer_waiting_on_me: boolean;
+  prefer_quick_wins: boolean;
 }
 
 interface GitHubProfile {
@@ -68,7 +72,12 @@ export async function getCurrentUser(): Promise<UserRow | null> {
   }
 
   const results = await query<UserRow>(
-    `SELECT id, github_id, login, name, avatar_url, created_at, COALESCE(starred_only, false) as starred_only
+    `SELECT id, github_id, login, name, avatar_url, created_at, 
+            COALESCE(starred_only, false) as starred_only,
+            COALESCE(prefer_known_customers, false) as prefer_known_customers,
+            COALESCE(prefer_recent_activity, true) as prefer_recent_activity,
+            COALESCE(prefer_waiting_on_me, true) as prefer_waiting_on_me,
+            COALESCE(prefer_quick_wins, true) as prefer_quick_wins
      FROM users
      WHERE github_id = $1`,
     [githubId],
